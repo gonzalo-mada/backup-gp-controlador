@@ -1,0 +1,31 @@
+{
+  "name": "template-controlador",
+  "base_version": "4.6.2",
+  "version": "1.0.0",
+  "description": "Template controlador",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon index.js",
+    "dev": "SET NODE_ENV=development & nodemon index.js",
+    "prod": "SET NODE_ENV=production & nodemon index.js",
+    "dev-unix": "NODE_ENV=development nodemon index.js",
+    "prod-unix": "NODE_ENV=production nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prettier-c": "prettier --check .",
+    "prettier-w": "prettier --write ."
+  },
+  "author": "DTIC",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.1",
+    "method-override": "^3.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "node-fetch": "^2.6.1",
+    "dateformat": "^4.5.1",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "prettier": "^2.8.8"
+  }
+}
