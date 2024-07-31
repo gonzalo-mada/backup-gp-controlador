@@ -25,6 +25,7 @@ module.exports = {
         /** Solo si config.js --> tipoPregrado = false se pueden eliminar estas dos 'lógicas' */
         { name: 'carrerasPregrado' },
         { name: 'procesosAcademicos' },
+        { name: "mongoDocumentos" },
 
         /** Agregar la lista de 'lógicas' que tu proyecto usará */
     ],
