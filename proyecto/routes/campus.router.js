@@ -9,6 +9,7 @@ var router = express.Router();
 
 router.post('/getCampus', services.getCampus);
 router.post('/saveDocs', services.saveDocs);
+router.post('/insertCampus', services.insertCampus);
 
 
 

@@ -8,42 +8,66 @@ const decryptToken = require("../../base/utils/decryptToken");
 var campus = 
 	[
 		{
-			"id": "1000",
-			"estado": 1,
-			"nombre": "Valparaíso"
+			"Cod_campus": "1000",
+			"Descripcion_campus": "Valparaíso",
+			"Estado_campus": 1,
 		},
         {
-			"id": "2000",
-			"estado": 1,
-			"nombre": "Santiago"
+			"Cod_campus": "2000",
+			"Descripcion_campus": "Santiago",
+			"Estado_campus": 1,
 		},
         {
-			"id": "3000",
-			"estado": 1,
-			"nombre": "San Felipe"
+			"Cod_campus": "3000",
+			"Descripcion_campus": "San Felipe",
+			"Estado_campus": 1,
 		},
         {
-			"id": "4000",
-			"estado": 0,
-			"nombre": "Melipilla"
+			"Cod_campus": "4000",
+			"Descripcion_campus": "Melipilla",
+			"Estado_campus": 0,
 		}
 
 	]
 
 
 
-let getCampus = async (request, response) => {
+let getCampus = async (req, res) => {
 
     try {
         let transformedCampus = campus.map(c => ({
             ...c,
-            estado: c.estado === 1 ? "Activo" : "Desactivo"
+            Estado_campus: c.Estado_campus === 1 ? "Activo" : "Desactivo"
         }));
-        response.json(reply.ok(transformedCampus));
+        res.json(reply.ok(transformedCampus));
     } catch (e) {
-        response.json(reply.fatal(e));
+        res.json(reply.fatal(e));
     }
+}
 
+let insertCampus = async (req, res) => {
+	try {
+		let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+		let msg = validador.validarParametro(args, "cadena", "Descripcion_campus", true);
+
+		if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+
+		let newCampus = { 
+			id: uuid.v1(),
+			Descripcion_campus: args.Descripcion_campus,
+			Estado_campus: 1
+		}
+		
+		campus.push(newCampus);
+
+		res.json(reply.ok(newCampus));
+
+	} catch (e) {
+		res.json(reply.fatal(e));
+	}
 }
 
 let saveDocs = async (req, res) => {
@@ -123,5 +147,6 @@ let saveDocs = async (req, res) => {
 
 module.exports = {
     getCampus,
+	insertCampus,
 	saveDocs
 }
