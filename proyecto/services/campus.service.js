@@ -4,6 +4,7 @@ var reply = require('../../base/utils/reply');
 var validador = require('../../base/utils/validador');
 const uuid = require("uuid");
 const decryptToken = require("../../base/utils/decryptToken");
+const reportInvoker = require("../../base/invokers/report.invoker");
 
 var campus = 
 	[
@@ -37,7 +38,7 @@ let getCampus = async (req, res) => {
     try {
         let transformedCampus = campus.map(c => ({
             ...c,
-            Estado_campus: c.Estado_campus === 1 ? "Activo" : "Desactivo"
+            Estado_campus: c.Estado_campus === 1 ? "activo" : "desactivo"
         }));
         res.json(reply.ok(transformedCampus));
     } catch (e) {
@@ -56,7 +57,7 @@ let insertCampus = async (req, res) => {
         }
 
 		let newCampus = { 
-			id: uuid.v1(),
+			Cod_campus: uuid.v1(),
 			Descripcion_campus: args.Descripcion_campus,
 			Estado_campus: 1
 		}
@@ -145,8 +146,65 @@ let saveDocs = async (req, res) => {
 	}
 }
 
+let getDocumentosCampus = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "cadena","idCampus", true);
+ 
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+ 
+        let documentos = await invoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/obtenerDocumentos",
+            {
+                database: "gestionProgramas",
+                coleccion: "campus",
+                documento: {
+                    "extras.idCampus": args.idCampus
+                },
+            }
+        );
+        res.json(reply.ok(documentos));
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+}
+
+let getArchivoDocumento = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "cadena", "id", true);
+ 
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+ 
+        let archivo = await reportInvoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/obtenerArchivoDocumento",
+            {
+                database: "gestionProgramas",
+                coleccion: "campus",
+                id: args.id,
+            }
+        );
+        console.log("descargando archivo con id:", args.id)
+        res.send(archivo);
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+};
+
+
+
 module.exports = {
     getCampus,
 	insertCampus,
+	getArchivoDocumento,
+	getDocumentosCampus,
 	saveDocs
 }

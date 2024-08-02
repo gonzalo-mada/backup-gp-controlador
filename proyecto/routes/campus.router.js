@@ -8,8 +8,10 @@ var router = express.Router();
 
 
 router.post('/getCampus', services.getCampus);
-router.post('/saveDocs', services.saveDocs);
 router.post('/insertCampus', services.insertCampus);
+router.post('/getArchivoDocumento', services.getArchivoDocumento);
+router.post('/getDocumentosCampus', services.getDocumentosCampus);
+router.post('/saveDocs', services.saveDocs);
 
 
 
