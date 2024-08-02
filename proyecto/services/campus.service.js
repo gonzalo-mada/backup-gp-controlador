@@ -158,7 +158,7 @@ let getDocumentosCampus = async (req, res) => {
  
         let documentos = await invoker(
             global.config.serv_mongoDocumentos,
-            "documentos/obtenerDocumentos",
+            "documentos/buscarDocumentos",
             {
                 database: "gestionProgramas",
                 coleccion: "campus",
@@ -167,6 +167,7 @@ let getDocumentosCampus = async (req, res) => {
                 },
             }
         );
+        console.log("docs", documentos)
         res.json(reply.ok(documentos));
     } catch (e) {
         res.json(reply.fatal(e));
