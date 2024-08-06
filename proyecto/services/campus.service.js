@@ -113,39 +113,45 @@ let deleteCampusSingular = async (req, res) => {
             res.json(reply.error(msg));
             return;
         }
- 
-        let documentos = await invoker(
-            global.config.serv_mongoDocumentos,
-            "documentos/buscarDocumentos",
-            {
-                database: "gestionProgramas",
-                coleccion: "campus",
-                documento: {
-                    "extras.Cod_campus": args.Cod_campus
-                },
-            }
-        );
+        
+        if (['1000', '2000', '3000', '4000'].includes(args.Cod_campus)) {
+            res.json(reply.fatal("No se puede eliminar un campus en uso"));
+            return;
+        }
+        else{
 
-       
-        //Ciclo iterativo para eliminar archivos con el id campus asociado
-        for(let d of documentos){
-            await invoker(
+            let documentos = await invoker(
                 global.config.serv_mongoDocumentos,
-                "documentos/eliminarDocumento",
+                "documentos/buscarDocumentos",
                 {
-                    database: 'gestionProgramas',
-                    coleccion: 'campus',
-                    id: d.id,
+                    database: "gestionProgramas",
+                    coleccion: "campus",
+                    documento: {
+                        "extras.Cod_campus": args.Cod_campus
+                    },
                 }
             );
+    
+           
+            //Ciclo iterativo para eliminar archivos con el id campus asociado
+            for(let d of documentos){
+                await invoker(
+                    global.config.serv_mongoDocumentos,
+                    "documentos/eliminarDocumento",
+                    {
+                        database: 'gestionProgramas',
+                        coleccion: 'campus',
+                        id: d.id,
+                    }
+                );
+            }
+    
+            //eliminación en bruto
+            campus = campus.filter(campus => campus.Cod_campus !== args.Cod_campus);
+            res.json(reply.ok());
+     
         }
-
-
-
-        //eliminación en bruto
-        campus = campus.filter(campus => campus.Cod_campus !== args.Cod_campus);
-        res.json(reply.ok());
- 
+       
     } catch (e) {
         res.json(reply.fatal(e));
     }
