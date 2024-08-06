@@ -92,7 +92,7 @@ let updateCampus = async (req, res) => {
             res.json(reply.error("Campus no encontrado"));
             return;
         }
-
+        
         // Actualizar la descripción del campus
         campusToUpdate.Descripcion_campus = args.Descripcion_campus;
         campusToUpdate.Estado_campus = args.Estado_campus == true ? 1 : 0;
@@ -104,58 +104,86 @@ let updateCampus = async (req, res) => {
 	}
 }
 
-let deleteCampusSingular = async (req, res) => {
+
+
+let logicaDeleteCampus = async (campusToDelete , res ) => {
+
+    const campusEnUso = ['1000', '2000', '3000'];
+
+    if (campusEnUso.includes(campusToDelete)) {
+        //no se puede borrar
+        return { deleted : false, campus : campusToDelete }
+    }else{
+        //si se puede borrar
+        console.log("antes de borrar",campus);
+        console.log("campusToDelete",campusToDelete);
+        campus = campus.filter(campus => campus.Cod_campus !== campusToDelete );
+        console.log("despues de borrar",campus);
+        return  { deleted : true, campus : campusToDelete }     
+    }
+
+}
+
+let deleteCampus = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        let msg = validador.validarParametro(args, "cadena", "Cod_campus", true);
- 
+        let msg = validador.validarParametro(args, "lista", "campusToDelete", true);
+
         if (msg != "") {
             res.json(reply.error(msg));
             return;
         }
-        
-        if (['1000', '2000', '3000', '4000'].includes(args.Cod_campus)) {
-            res.json(reply.fatal("No se puede eliminar un campus en uso"));
-            return;
-        }
-        else{
 
-            let documentos = await invoker(
-                global.config.serv_mongoDocumentos,
-                "documentos/buscarDocumentos",
-                {
-                    database: "gestionProgramas",
-                    coleccion: "campus",
-                    documento: {
-                        "extras.Cod_campus": args.Cod_campus
-                    },
-                }
-            );
-    
-           
-            //Ciclo iterativo para eliminar archivos con el id campus asociado
-            for(let d of documentos){
-                await invoker(
+        let campusToDelete = args.campusToDelete;
+        let deleted = [];
+        let notDeleted = [];
+        
+        for (let i = 0; i < campusToDelete.length; i++) {
+            const e = campusToDelete[i];
+            let resp =  await logicaDeleteCampus(e.Cod_campus , res )
+            
+            
+            if (resp.deleted === true ){
+                //pusheo a los borrados
+                
+                deleted.push(e);
+
+                let documentos = await invoker(
                     global.config.serv_mongoDocumentos,
-                    "documentos/eliminarDocumento",
+                    "documentos/buscarDocumentos",
                     {
-                        database: 'gestionProgramas',
-                        coleccion: 'campus',
-                        id: d.id,
+                        database: "gestionProgramas",
+                        coleccion: "campus",
+                        documento: {
+                            "extras.Cod_campus": args.Cod_campus
+                        },
                     }
                 );
+
+                for(let d of documentos){
+                    await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/eliminarDocumento",
+                        {
+                            database: 'gestionProgramas',
+                            coleccion: 'campus',
+                            id: d.id,
+                        }
+                    );
+                }
+
+            }else{
+                //pusheo a los no borrados
+                notDeleted.push(e);
             }
-    
-            //eliminación en bruto
-            campus = campus.filter(campus => campus.Cod_campus !== args.Cod_campus);
-            res.json(reply.ok());
-     
         }
-       
+        let result = { deleted , notDeleted}
+        res.json(reply.ok(result));
+
     } catch (e) {
         res.json(reply.fatal(e));
     }
-}
+} 
 
 
 //mongo
@@ -327,7 +355,6 @@ let getDocumentosCampus = async (req, res) => {
     }
 }
 
-
 let getDocumentosWithBinaryCampus = async (req, res) => {
 
     try {
@@ -435,11 +462,11 @@ module.exports = {
     getCampus,
 	insertCampus,
     updateCampus,
+    deleteCampus,
 	getArchivoDocumento,
 	getDocumentosCampus,
     getDocumentosWithBinaryCampus,
 	saveDocs,
     updateDocs,
-    deleteDocCampus,
-    deleteCampusSingular
+    deleteDocCampus
 }

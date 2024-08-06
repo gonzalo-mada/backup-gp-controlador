@@ -6,11 +6,11 @@ var services = require('../services/campus.service');
 
 var router = express.Router();
 
-
+//sql server
 router.post('/getCampus', services.getCampus);
 router.post('/insertCampus', services.insertCampus);
 router.post('/updateCampus', services.updateCampus);
-router.post('/deleteCampusSingular', services.deleteCampusSingular);
+router.post('/deleteCampus', services.deleteCampus);
 
 //mongo
 router.post('/getArchivoDocumento', services.getArchivoDocumento);
