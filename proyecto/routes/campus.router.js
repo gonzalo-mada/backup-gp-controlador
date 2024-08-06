@@ -10,13 +10,16 @@ var router = express.Router();
 router.post('/getCampus', services.getCampus);
 router.post('/insertCampus', services.insertCampus);
 router.post('/updateCampus', services.updateCampus);
+router.post('/deleteCampusSingular', services.deleteCampusSingular);
+
+//mongo
 router.post('/getArchivoDocumento', services.getArchivoDocumento);
 router.post('/getDocumentosCampus', services.getDocumentosCampus);
 router.post('/getDocumentosWithBinaryCampus', services.getDocumentosWithBinaryCampus);
 router.post('/saveDocs', services.saveDocs);
 router.post('/updateDocs', services.updateDocs);
 router.post('/deleteDocCampus', services.deleteDocCampus);
-router.post('/deleteDocs', services.deleteDocs);
+
 
 
 

@@ -104,6 +104,55 @@ let updateCampus = async (req, res) => {
 	}
 }
 
+let deleteCampusSingular = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "cadena", "Cod_campus", true);
+ 
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+ 
+        let documentos = await invoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/buscarDocumentos",
+            {
+                database: "gestionProgramas",
+                coleccion: "campus",
+                documento: {
+                    "extras.Cod_campus": args.Cod_campus
+                },
+            }
+        );
+
+       
+        //Ciclo iterativo para eliminar archivos con el id campus asociado
+        for(let d of documentos){
+            await invoker(
+                global.config.serv_mongoDocumentos,
+                "documentos/eliminarDocumento",
+                {
+                    database: 'gestionProgramas',
+                    coleccion: 'campus',
+                    id: d.id,
+                }
+            );
+        }
+
+
+
+        //eliminación en bruto
+        campus = campus.filter(campus => campus.Cod_campus !== args.Cod_campus);
+        res.json(reply.ok());
+ 
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+}
+
+
+//mongo
 let saveDocs = async (req, res) => {
 	try {
 		let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
@@ -128,7 +177,7 @@ let saveDocs = async (req, res) => {
                 database: "gestionProgramas",
                 coleccion: "campus",
                 documento: {
-                    "extras.idCampus": args.Cod_campus,
+                    "extras.Cod_campus": args.Cod_campus,
                     nombre: args.nombre,
                 },
             }
@@ -147,7 +196,7 @@ let saveDocs = async (req, res) => {
             dataBase64: args.archivo,
             tipo: args.tipo,
             extras: {
-                idCampus: args.Cod_campus,
+                Cod_campus: args.Cod_campus,
                 nombreCampus: args.Descripcion_campus,
                 pesoDocumento: args.pesoDocumento,
                 comentarios: args.comentarios,
@@ -196,24 +245,25 @@ let updateDocs = async (req, res) => {
             return;
         }
 
+        //TODO: ARREGLAR EN CASO DE QUE SUBA EL MISMO ARCHIVO
 		//Busca si no hay documentos con el mismo nombre para el mismo campus
-        let documentoFind = await invoker(
-            global.config.serv_mongoDocumentos,
-            "documentos/buscarDocumentos",
-            {
-                database: "gestionProgramas",
-                coleccion: "campus",
-                documento: {
-                    "extras.Cod_campus": args.Cod_campus,
-                    nombre: args.nombre,
-                },
-            }
-        );
+        // let documentoFind = await invoker(
+        //     global.config.serv_mongoDocumentos,
+        //     "documentos/buscarDocumentos",
+        //     {
+        //         database: "gestionProgramas",
+        //         coleccion: "campus",
+        //         documento: {
+        //             "extras.Cod_campus": args.Cod_campus,
+        //             nombre: args.nombre,
+        //         },
+        //     }
+        // );
 
-        if (documentoFind.length) {
-            res.json(reply.error(`El documento ${args.nombre} ya existe.`));
-            return;
-        }
+        // if (documentoFind.length) {
+        //     res.json(reply.error(`El documento ${args.nombre} ya existe.`));
+        //     return;
+        // }
 
         let param = {
             database: "gestionProgramas",
@@ -223,7 +273,7 @@ let updateDocs = async (req, res) => {
             dataBase64: args.dataBase64,
             tipo: args.tipo,
             extras: {
-                idCampus: args.Cod_campus,
+                Cod_campus: args.Cod_campus,
                 nombreCampus: args.Descripcion_campus,
                 pesoDocumento: args.pesoDocumento,
                 comentarios: args.comentarios,
@@ -247,7 +297,7 @@ let updateDocs = async (req, res) => {
 let getDocumentosCampus = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        let msg = validador.validarParametro(args, "cadena","idCampus", true);
+        let msg = validador.validarParametro(args, "cadena","Cod_campus", true);
  
         if (msg != "") {
             res.json(reply.error(msg));
@@ -261,7 +311,7 @@ let getDocumentosCampus = async (req, res) => {
                 database: "gestionProgramas",
                 coleccion: "campus",
                 documento: {
-                    "extras.idCampus": args.idCampus
+                    "extras.Cod_campus": args.Cod_campus
                 },
             }
         );
@@ -276,7 +326,7 @@ let getDocumentosWithBinaryCampus = async (req, res) => {
 
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        let msg = validador.validarParametro(args, "cadena","idCampus", true);
+        let msg = validador.validarParametro(args, "cadena","Cod_campus", true);
  
         if (msg != "") {
             res.json(reply.error(msg));
@@ -290,7 +340,7 @@ let getDocumentosWithBinaryCampus = async (req, res) => {
                 database: "gestionProgramas",
                 coleccion: "campus",
                 documento: {
-                    "extras.idCampus": args.idCampus
+                    "extras.Cod_campus": args.Cod_campus
                 },
             }
         );
@@ -301,7 +351,7 @@ let getDocumentosWithBinaryCampus = async (req, res) => {
             {
                 database: "gestionProgramas",
                 coleccion: "campus",
-                id: args.idCampus
+                id: args.Cod_campus
             }
         );
 
@@ -346,6 +396,7 @@ let getArchivoDocumento = async (req, res) => {
 };
 
 let deleteDocCampus = async (req, res) => {
+
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
         let msg = validador.validarParametro(args, "cadena","Cod_campus", true);
@@ -372,48 +423,7 @@ let deleteDocCampus = async (req, res) => {
     }
 }
 
-let deleteDocs = async (req, res) => {
-    try {
-        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        let msg = validador.validarParametro(args, "cadena", "idCampus", true);
- 
-        if (msg != "") {
-            res.json(reply.error(msg));
-            return;
-        }
- 
-        let documentos = await invoker(
-            global.config.serv_mongoDocumentos,
-            "documentos/buscarDocumentos",
-            {
-                database: "gestionProgramas",
-                coleccion: "campus",
-                documento: {
-                    "extras.idCampus": args.idCampus
-                },
-            }
-        );
-       
-        //Ciclo iterativo para eliminar archivos con el id campus asociado
-        for(let d of documentos){
-            await invoker(
-                global.config.serv_mongoDocumentos,
-                "documentos/eliminarDocumento",
-                {
-                    database: 'gestionProgramas',
-                    coleccion: 'campus',
-                    id: d.id,
-                }
-            );
-        }
-        //eliminación en bruto
-        campus = campus.filter(campus => campus.Cod_campus !== args.idCampus);
-        res.json(reply.ok());
- 
-    } catch (e) {
-        res.json(reply.fatal(e));
-    }
-}
+
 
 module.exports = {
     getCampus,
@@ -425,5 +435,5 @@ module.exports = {
 	saveDocs,
     updateDocs,
     deleteDocCampus,
-    deleteDocs
+    deleteCampusSingular
 }
