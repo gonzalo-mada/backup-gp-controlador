@@ -211,7 +211,6 @@ let saveDocs = async (req, res) => {
                 database: "gestionProgramas",
                 coleccion: "campus",
                 documento: {
-                    "extras.Cod_campus": args.Cod_campus,
                     nombre: args.nombre,
                 },
             }
@@ -457,6 +456,268 @@ let deleteDocCampus = async (req, res) => {
 }
 
 
+//NUEVOS SERVICIOS USANDO LOGICA
+
+let logica_getCampus = async (req, res) => {
+    try {
+        let campus = await invoker(
+            global.config.serv_campus,
+            'postgrado/getCampus',
+            null
+        );
+
+        campus = campus.map( e => {
+            return {
+                Cod_campus : e.codigo,
+                Descripcion_campus: e.descripcion,
+                Estado_campus: e.estado
+            }
+        })
+        res.json(reply.ok(campus));
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+};
+
+let logica_insertCampus = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? '{}' : req.body.arg);
+		// let msg = validador.validarParametro(args, "numero", "Cod_campus", true);
+		let msg = validador.validarParametro(args, "cadena", "Descripcion_campus", true);
+        msg += validador.validarParametro(args, "boolean", "Estado_campus", true);
+
+        //MONGODB 
+        msg += validador.validarParametro(args, "cadena", "nombre", true);
+        msg += validador.validarParametro(args, "cadena", "archivo", true);
+        msg += validador.validarParametro(args, "cadena", "tipo", true);
+        msg += validador.validarParametro( args, "cadena", "pesoDocumento", true);
+        msg += validador.validarParametro(args, "cadena", "comentarios", false);
+
+
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+
+        //INSERTAR CAMPUS
+        let campus = await invoker(
+            global.config.serv_campus,
+            'postgrado/getCampus',
+            null
+        );
+        let ultimoObjeto = campus[campus.length - 1];
+        let ultimoCodigo = ultimoObjeto.codigo;
+        let codigoCampus = ultimoCodigo + 1; 
+
+        let params = {
+            codigoCampus: parseInt(codigoCampus),
+            descripcionCampus: args.Descripcion_campus,
+            estadoCampus: args.Estado_campus === true ? 1 : 0,
+        }
+
+        let insertCampus = await invoker(
+            global.config.serv_campus,
+            'postgrado/insertCampus',
+            params
+        );
+
+        insertCampus = insertCampus.map( e => {
+            return {
+                Cod_campus : e.codigo,
+                Descripcion_campus: e.descripcion,
+                Estado_campus: e.estado
+            }
+        })
+
+        //INSERTAR DOCUMENTO
+        //Busca si no hay documentos con el mismo nombre para el campus
+        let documentoFind = await invoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/buscarDocumentos",
+            {
+                database: "gestionProgramas",
+                coleccion: "campus",
+                documento: {
+                    "extras.Cod_campus": parseInt(codigoCampus),
+                    nombre: args.nombre,
+                },
+            }
+        );
+        if (documentoFind.length) {
+            res.json(reply.error(`El documento ${args.nombre} ya existe.`));
+
+            //falló la inserción de doc por lo que se borra el campus recién insertado
+            let params = {
+                codigoCampus: parseInt(codigoCampus),
+            }
+            await invoker(
+                global.config.serv_campus,
+                'postgrado/deleteCampus',
+                params
+            );
+            return;
+        }
+
+        let param = {
+            database: "gestionProgramas",
+            coleccion: "campus",
+            id: uuid.v1(),
+            nombre: args.nombre,
+            dataBase64: args.archivo,
+            tipo: args.tipo,
+            extras: {
+                Cod_campus: parseInt(codigoCampus),
+                nombreCampus: args.Descripcion_campus,
+                pesoDocumento: args.pesoDocumento,
+                comentarios: args.comentarios,
+            },
+        };
+
+		let result = await invoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/guardarDocumento",
+            param
+        );
+
+		let documento = await invoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/obtenerDocumento",
+            {
+                database: "gestionProgramas",
+                coleccion: "campus",
+                id: result.id,
+            }
+        );
+
+        let response = { insertCampus , documento}
+
+        res.json(reply.ok(response));
+
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+};
+
+let logica_updateCampus = async (req , res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "cadena", "Cod_campus", true);
+		msg += validador.validarParametro(args, "boolean", "Estado_campus", true);
+		msg += validador.validarParametro(args, "cadena", "Descripcion_campus", true);
+
+        //MONGO
+        msg += validador.validarParametro(args, "cadena", "id", true);
+        msg += validador.validarParametro(args, "cadena", "nombre", true);
+        msg += validador.validarParametro(args, "cadena", "dataBase64", true);
+        msg += validador.validarParametro(args, "cadena", "tipo", true);
+        msg += validador.validarParametro( args, "cadena", "pesoDocumento", true);
+        msg += validador.validarParametro(args, "cadena", "comentarios", false);
+
+
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+
+        //ACTUALIZAR CAMPUS
+        let params = {
+            codigoCampus: parseInt(args.Cod_campus),
+            descripcionCampus: args.Descripcion_campus,
+            estadoCampus: args.Estado_campus === true ? 1 : 0,
+        }
+
+        let updateCampus = await invoker(
+            global.config.serv_campus,
+            'postgrado/updateCampus',
+            params
+        );
+
+        //ACTUALIZAR DOCUMENTO
+
+        let param = {
+            database: "gestionProgramas",
+            coleccion: "campus",
+            id: args.id,
+            nombre: args.nombre,
+            dataBase64: args.dataBase64,
+            tipo: args.tipo,
+            extras: {
+                Cod_campus: parseInt(args.Cod_campus),
+                nombreCampus: args.Descripcion_campus,
+                pesoDocumento: args.pesoDocumento,
+                comentarios: args.comentarios,
+            },
+        };
+
+        let documentoUpdated = await invoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/actualizarDocumento",
+            param
+        );
+
+        let response = { updateCampus , documentoUpdated }
+        res.json(reply.ok(response));
+
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+}
+
+let logica_deleteCampus = async (req , res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "lista", "campusToDelete", true);
+
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+
+        let campusToDelete = args.campusToDelete;
+        for (let i = 0; i < campusToDelete.length; i++) {
+            const e = campusToDelete[i];
+
+            let params = {
+                codigoCampus: parseInt(e.Cod_campus),
+            }
+
+            await invoker(
+                global.config.serv_campus,
+                'postgrado/deleteCampus',
+                params
+            );
+
+            let documentos = await invoker(
+                global.config.serv_mongoDocumentos,
+                "documentos/buscarDocumentos",
+                {
+                    database: "gestionProgramas",
+                    coleccion: "campus",
+                    documento: {
+                        "extras.Cod_campus": e.Cod_campus
+                    },
+                }
+            );
+
+            for(let d of documentos){
+                await invoker(
+                    global.config.serv_mongoDocumentos,
+                    "documentos/eliminarDocumento",
+                    {
+                        database: 'gestionProgramas',
+                        coleccion: 'campus',
+                        id: d.id,
+                    }
+                );
+            }
+        }
+
+        res.json(reply.ok(campusToDelete));
+        
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+}
 
 module.exports = {
     getCampus,
@@ -468,5 +729,9 @@ module.exports = {
     getDocumentosWithBinaryCampus,
 	saveDocs,
     updateDocs,
-    deleteDocCampus
+    deleteDocCampus,
+    logica_getCampus,
+    logica_insertCampus,
+    logica_updateCampus,
+    logica_deleteCampus
 }

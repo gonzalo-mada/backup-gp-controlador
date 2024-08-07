@@ -30,6 +30,7 @@ module.exports = {
         /** servicio de ejemplo, SOLO para ambiente desarrollo */
         { name: 'proyectoBase_medio' },
         { name: "mongoDocumentos" },
+        { name: "campus" }
     ],
     /** Funciones de ejemplo, eliminar tag 'funciones' si tu proyecto no las necesita */
     funciones: [

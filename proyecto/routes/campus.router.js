@@ -20,6 +20,11 @@ router.post('/saveDocs', services.saveDocs);
 router.post('/updateDocs', services.updateDocs);
 router.post('/deleteDocCampus', services.deleteDocCampus);
 
+//logica campus
+router.post('/logica_getCampus', services.logica_getCampus);
+router.post('/logica_insertCampus', services.logica_insertCampus);
+router.post('/logica_updateCampus', services.logica_updateCampus);
+router.post('/logica_deleteCampus', services.logica_deleteCampus);
 
 
 
