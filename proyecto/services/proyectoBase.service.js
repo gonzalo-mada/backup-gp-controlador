@@ -27,7 +27,7 @@ let getFacultades = async (request, response) => {
             'getFacultades',
             null
         );
-
+        
         response.json(reply.ok(facultades));
     } catch (e) {
         response.json(reply.fatal(e));
