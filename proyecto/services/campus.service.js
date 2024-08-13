@@ -111,10 +111,7 @@ let logicaDeleteCampus = async (campusToDelete , res ) => {
         return { deleted : false, campus : campusToDelete }
     }else{
         //si se puede borrar
-        console.log("antes de borrar",campus);
-        console.log("campusToDelete",campusToDelete);
         campus = campus.filter(campus => campus.Cod_campus !== campusToDelete );
-        console.log("despues de borrar",campus);
         return  { deleted : true, campus : campusToDelete }     
     }
 
@@ -350,7 +347,7 @@ let getDocumentosCampus = async (req, res) => {
     }
 }
 
-let getDocumentosWithBinaryCampus = async (req, res) => {
+let getDocumentosWithBinary = async (req, res) => {
 
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
@@ -428,7 +425,7 @@ let getArchivoDocumento = async (req, res) => {
     }
 };
 
-let deleteDocCampus = async (req, res) => {
+let deleteDoc = async (req, res) => {
 
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
@@ -783,10 +780,10 @@ module.exports = {
     deleteCampus,
 	getArchivoDocumento,
 	getDocumentosCampus,
-    getDocumentosWithBinaryCampus,
+    getDocumentosWithBinary,
 	saveDocs,
     updateDocs,
-    deleteDocCampus,
+    deleteDoc,
     logica_getCampus,
     logica_insertCampus,
     logica_updateCampus,

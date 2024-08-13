@@ -15,10 +15,10 @@ router.post('/deleteCampus', services.deleteCampus);
 //mongo
 router.post('/getArchivoDocumento', services.getArchivoDocumento);
 router.post('/getDocumentosCampus', services.getDocumentosCampus);
-router.post('/getDocumentosWithBinaryCampus', services.getDocumentosWithBinaryCampus);
+router.post('/getDocumentosWithBinary', services.getDocumentosWithBinary);
 router.post('/saveDocs', services.saveDocs);
 router.post('/updateDocs', services.updateDocs);
-router.post('/deleteDocCampus', services.deleteDocCampus);
+router.post('/deleteDoc', services.deleteDoc);
 
 //logica campus
 router.post('/logica_getCampus', services.logica_getCampus);
