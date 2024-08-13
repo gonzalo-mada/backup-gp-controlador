@@ -3,7 +3,6 @@ var invoker = require('../../base/invokers/invoker.invoker');
 var reply = require('../../base/utils/reply');
 var validador = require('../../base/utils/validador');
 const uuid = require("uuid");
-const decryptToken = require("../../base/utils/decryptToken");
 const reportInvoker = require("../../base/invokers/report.invoker");
 
 var campus = 
@@ -28,10 +27,7 @@ var campus =
 			"Descripcion_campus": "Melipilla",
 			"Estado_campus": 0,
 		}
-
 	]
-
-
 
 let getCampus = async (req, res) => {
 
@@ -377,23 +373,28 @@ let getDocumentosWithBinaryCampus = async (req, res) => {
             }
         );
 
-        let binaryDocumento = await reportInvoker(
-            global.config.serv_mongoDocumentos,
-            "documentos/obtenerArchivoDocumento",
-            {
-                database: "gestionProgramas",
-                coleccion: "campus",
-                id: args.Cod_campus
-            }
-        );
+        const docsWithBinary = await Promise.all(documentos.map(async (documento) => {
+            //obtengo binario
+            let binaryDocumento = await reportInvoker(
+                global.config.serv_mongoDocumentos,
+                "documentos/obtenerArchivoDocumento",
+                {
+                    database: "gestionProgramas",
+                    coleccion: "campus",
+                    id: documento.id
+                }
+            );
+            
+            //convierto binario a base64
+            const dataBase64 = binaryDocumento.toString('base64');
 
-        let documentoString = binaryDocumento.toString('base64');
-
-        documentos.forEach(doc => {
-            doc.dataBase64 = documentoString;  // Agrega el campo documentoString al documento
-        });
-        
-        res.json(reply.ok(documentos));
+            return {
+                ...documento,
+                dataBase64
+            };
+        }))
+ 
+        res.json(reply.ok(docsWithBinary));
     } catch (e) {
         res.json(reply.fatal(e));
     }
@@ -499,6 +500,14 @@ let logica_insertCampus = async (req, res) => {
             'postgrado/getCampus',
             null
         );
+
+        let campusExists = campus.some(c => (String(c.descripcion).toLowerCase() === String(args.Descripcion_campus).toLowerCase()) );
+
+        if (campusExists) {
+            res.json(reply.error(`El campus ${args.Descripcion_campus} ya existe.`));
+            return;
+        }
+        
         let ultimoObjeto = campus[campus.length - 1];
         let ultimoCodigo = ultimoObjeto.codigo;
         let codigoCampus = ultimoCodigo + 1; 
@@ -509,14 +518,11 @@ let logica_insertCampus = async (req, res) => {
             estadoCampus: args.Estado_campus === true ? 1 : 0,
         }
 
-        
-
         let insertCampus = await invoker(
             global.config.serv_campus,
             'postgrado/insertCampus',
             params
         );
-
 
         // insertCampus = insertCampus.map( e => {
         //     return {
@@ -621,11 +627,9 @@ let logica_updateCampus = async (req , res) => {
         if (args.docs.length != 0) {
             for (let i = 0; i < args.docs.length; i++) {
                 const doc = args.docs[i];
-
                 if (!doc.id) {
                     //es un nuevo archivo
                     //buscamos archivos con mismo codigo y nombre
-                    console.log("modo nuevo archivo");
                     let documentoFind = await invoker(
                         global.config.serv_mongoDocumentos,
                         "documentos/buscarDocumentos",
@@ -665,13 +669,13 @@ let logica_updateCampus = async (req , res) => {
                     docs.push(result)
                 }else{
                     // no es nuervo archivo, por tanto se actualiza
-                    console.log("modo actualizo archivo");
+
                     let param = {
                         database: "gestionProgramas",
                         coleccion: "campus",
                         id: doc.id,
                         nombre: doc.nombre,
-                        dataBase64: doc.dataBase64,
+                        dataBase64: new Buffer.from(doc.dataBase64, "base64"),
                         tipo: doc.tipo,
                         extras: {
                             Cod_campus: doc.extras.Cod_campus,
@@ -686,6 +690,8 @@ let logica_updateCampus = async (req , res) => {
                         "documentos/actualizarDocumento",
                         param
                     );
+
+                    // console.log(result);
 
                     docs.push(result)
                 }
@@ -718,14 +724,10 @@ let logica_deleteCampus = async (req , res) => {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
         let msg = validador.validarParametro(args, "lista", "campusToDelete", true);
 
-        
-
         if (msg != "") {
             res.json(reply.error(msg));
             return;
         }
-
-        
 
         let campusToDelete = args.campusToDelete;
 
@@ -754,8 +756,6 @@ let logica_deleteCampus = async (req , res) => {
                 }
             );
 
-            
-
             for(let d of documentos){
                 await invoker(
                     global.config.serv_mongoDocumentos,
@@ -771,7 +771,6 @@ let logica_deleteCampus = async (req , res) => {
         }
 
         res.json(reply.ok(campusToDelete));
-        
     } catch (e) {
         res.json(reply.fatal(e));
     }

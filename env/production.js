@@ -26,6 +26,7 @@ module.exports = {
         { name: 'carrerasPregrado' },
         { name: 'procesosAcademicos' },
         { name: "mongoDocumentos" },
+        
 
         /** Agregar la lista de 'lógicas' que tu proyecto usará */
     ],
