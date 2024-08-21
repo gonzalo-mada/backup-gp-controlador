@@ -105,7 +105,7 @@ let bruto_insertFacultad = async (req, res) => {
                         id: result.id,
                     }
                 );
-                response = { facultad: newFacultad , documento: documento}
+                response = { dataWasInserted: newFacultad , dataInserted: args.Descripcion_facu}
             }
         }
 
@@ -213,9 +213,9 @@ let bruto_updateFacultad = async (req, res) => {
         // Actualizar la descripción del facultad
         facultadToUpdate.Descripcion_facu = args.Descripcion_facu;
 
-        response = { facultadUpdated: facultadToUpdate , dataDocs: docs }
+        response = { dataWasUpdated: facultadToUpdate , dataUpdated: args.Descripcion_facu }
 
-		res.json(reply.ok(facultadToUpdate));
+		res.json(reply.ok(response));
 
 	} catch (e) {
 		res.json(reply.fatal(e));
@@ -262,7 +262,9 @@ let bruto_deleteFacultad = async (req, res) => {
                 );
             }
         }
-        res.json(reply.ok(facultadesToDelete));
+
+        let response = { dataWasDeleted: true , dataDeleted: facultadesToDelete}
+        res.json(reply.ok(response));
 
     } catch (e) {
         res.json(reply.fatal(e));

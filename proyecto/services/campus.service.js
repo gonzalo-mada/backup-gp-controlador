@@ -520,7 +520,7 @@ let logica_insertCampus = async (req, res) => {
             'postgrado/insertCampus',
             params
         );
-
+       
         // insertCampus = insertCampus.map( e => {
         //     return {
         //         Cod_campus : e.codigo,
@@ -531,7 +531,6 @@ let logica_insertCampus = async (req, res) => {
 
         //condicion para insert campus con docs incluidos
         if (args.docs.length != 0) {
-
             for (let i = 0; i < args.docs.length; i++) {
                 const doc = args.docs[i];
                 //INSERTAR DOCUMENTO
@@ -593,7 +592,7 @@ let logica_insertCampus = async (req, res) => {
             }
         }
         
-        response = { campus: insertCampus , documento: args.docs}
+        response = { dataWasInserted: insertCampus, dataInserted: args.Descripcion_campus}
         
         res.json(reply.ok(response));
 
@@ -608,12 +607,34 @@ let logica_updateCampus = async (req , res) => {
         let msg = validador.validarParametro(args, "cadena", "Cod_campus", true);
 		msg += validador.validarParametro(args, "boolean", "Estado_campus", true);
 		msg += validador.validarParametro(args, "cadena", "Descripcion_campus", true);
+		msg += validador.validarParametro(args, "boolean", "isFromChangeState", true);
         // msg += validador.validarParametro(args, "lista", "docs", false);
+
 
 
         if (msg != "") {
             res.json(reply.error(msg));
             return;
+        }
+        
+        //condicion de actualizacion campus sin archivos
+        //obtengo archivos 
+        let documentos = await invoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/buscarDocumentos",
+            {
+                database: "gestionProgramas",
+                coleccion: "campus",
+                documento: {
+                    "extras.Cod_campus": parseInt(args.Cod_campus)
+                },
+            }
+        );
+       
+        //si campus no tiene documentos y cambia de estado false a true desde la funcion changeState, mandar error
+        if (documentos.length === 0 && args.Estado_campus === false && args.isFromChangeState === true) {
+            res.json(reply.error(`El campus ${args.Descripcion_campus} no es posible activar sin archivos adjuntos.`));
+            return
         }
 
         let response = {};
@@ -696,10 +717,17 @@ let logica_updateCampus = async (req , res) => {
         }
 
         //ACTUALIZAR CAMPUS
+        
+        let newState = args.Estado_campus === true ? false : true
+
         let params = {
             codigoCampus: parseInt(args.Cod_campus),
             descripcionCampus: args.Descripcion_campus,
-            estadoCampus: args.Estado_campus === true ? 1 : 0,
+            // si hubo un update desde la funcion cambiar estado, 
+            // transformo a number variable newState, 
+            //sino 
+            //transformo a number variable estado campus (caso para update desde modal update)
+            estadoCampus: args.isFromChangeState  ? (newState ? 1 : 0) : (args.Estado_campus ? 1 : 0), 
         }
 
         let updateCampus = await invoker(
@@ -708,7 +736,7 @@ let logica_updateCampus = async (req , res) => {
             params
         );
 
-        response = { campusUpdated: updateCampus , dataDocs: docs }
+        response = { dataWasUpdated: updateCampus, dataUpdated: args.Descripcion_campus }
         res.json(reply.ok(response));
 
     } catch (e) {
@@ -766,8 +794,8 @@ let logica_deleteCampus = async (req , res) => {
             }
 
         }
-
-        res.json(reply.ok(campusToDelete));
+        let response = { dataWasDeleted: true , dataDeleted: campusToDelete}
+        res.json(reply.ok(response));
     } catch (e) {
         res.json(reply.fatal(e));
     }
