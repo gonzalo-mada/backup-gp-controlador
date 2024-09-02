@@ -202,14 +202,6 @@ let deleteTiposProgramas = async (request, response) => {
 
 
 module.exports = {
-    getCampus,
-    updateCampus,
-    insertCampus,
-    deleteCampus,
-    getFacultades,
-    updateFacultades,
-    insertFacultades,
-    deleteFacultades,
     getCategoriasTp,
     insertCategoriasTp,
     updateCategoriasTp,
