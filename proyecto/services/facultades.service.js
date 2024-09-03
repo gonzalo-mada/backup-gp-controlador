@@ -33,7 +33,7 @@ let bruto_insertFacultad = async (req, res) => {
     
 	try {
 		let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-		let msg = validador.validarParametro(args, "number", "Descripcion_facu", true);
+		let msg = validador.validarParametro(args, "cadena", "Descripcion_facu", true);
         // msg += validador.validarParametro(args, "lista", "docs", false);
 
 		if (msg != "") {
@@ -206,7 +206,7 @@ let bruto_updateFacultad = async (req, res) => {
         let facultadToUpdate = facultades.find(c => c.Cod_facultad === args.Cod_facultad);
 
         if (!facultadToUpdate) {
-            res.json(reply.error("Facultad no encontrado"));
+            res.json(reply.error("Facultad no encontrada"));
             return;
         }
         
@@ -266,6 +266,323 @@ let bruto_deleteFacultad = async (req, res) => {
         let response = { dataWasDeleted: true , dataDeleted: facultadesToDelete}
         res.json(reply.ok(response));
 
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+}
+
+let getFacultades = async(req, res) => {
+    try {
+        let facultades = await invoker(
+            global.config.serv_campus,
+            'postgrado/getFacultades',
+            null
+        );
+
+        facultades = facultades.map( e => {
+            return {
+                Cod_facultad : e.codigo,
+                Descripcion_facu: e.descripcion,
+                Estado_facu: e.estado === 1 ? true : false,
+            }
+        })
+        res.json(reply.ok(facultades));
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+}
+
+let insertFacultad = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? '{}' : req.body.arg);
+        let msg = validador.validarParametro(args, "cadena", "Descripcion_facu", true);
+        msg += validador.validarParametro(args, "boolean", "Estado_facu", true);
+
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+        let response = {};
+
+        let facultades = await invoker(
+            global.config.serv_campus,
+            'postgrado/getFacultades',
+            null
+        );
+
+        let facultadExists = facultades.some(data => (String(data.descripcion).toLowerCase() === String(args.Descripcion_facu).toLowerCase()) );
+
+        if (facultadExists) {
+            res.json(reply.error(`La facultad ${args.Descripcion_facu} ya existe.`));
+            return;
+        }
+
+        let ultimoObjeto = facultades[facultades.length - 1];
+        let ultimoCodigo = ultimoObjeto.codigo;
+        let codigoFacultad = ultimoCodigo + 1;
+
+        let params = {
+            codigoFacultad: parseInt(codigoFacultad),
+            descripcionFacultad: args.Descripcion_facu,
+            estadoFacultad: args.Estado_facu === true ? 1 : 0,
+        }
+
+        let insertFacultad = await invoker(
+            global.config.serv_campus,
+            'postgrado/insertFacultades',
+            params
+        );
+
+        if (!insertFacultad){
+            res.json(reply.error(`La facultad no pudo ser creada.`));
+            return;
+        }else{
+            if (args.docs.length != 0) {
+                for (let i = 0; i < args.docs.length; i++) {
+                    const doc = args.docs[i];
+                    //INSERTAR DOCUMENTO
+                    //Busca si no hay documentos con el mismo nombre
+                    let documentoFind = await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/buscarDocumentos",
+                        {
+                            database: "gestionProgramas",
+                            coleccion: "facultades",
+                            documento: {
+                                "extras.Cod_facultad": parseInt(codigoFacultad),
+                                nombre: doc.nombre,
+                            },
+                        }
+                    );
+                    if (documentoFind.length) {
+                        //falló la inserción de doc por lo que se borra el registro recién insertado
+                        let params = {
+                            codigoFacultad: parseInt(codigoFacultad),
+                        }
+                        await invoker(
+                            global.config.serv_campus,
+                            'postgrado/deleteFacultades',
+                            params
+                        );
+                        res.json(reply.error(`El documento ${doc.nombre} ya existe.`));
+                        return;
+                    }
+                    let param = {
+                        database: "gestionProgramas",
+                        coleccion: "facultades",
+                        id: uuid.v1(),
+                        nombre: doc.nombre,
+                        dataBase64: doc.archivo,
+                        tipo: doc.tipo,
+                        extras: {
+                            Cod_facultad: parseInt(codigoFacultad),
+                            nombreFacultad: doc.extras.Descripcion_facu,
+                            pesoDocumento: doc.extras.pesoDocumento,
+                            comentarios: doc.extras.comentarios,
+                        },
+                    };
+                    await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/guardarDocumento",
+                        param
+                    );
+                }
+            }
+        }
+
+        response = { dataWasInserted: insertFacultad , dataInserted: args.Descripcion_facu}
+        res.json(reply.ok(response));
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+}
+
+let updateFacultad = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "cadena", "Cod_facultad", true);
+        msg += validador.validarParametro(args, "boolean", "Estado_facu", true);
+        msg += validador.validarParametro(args, "cadena", "Descripcion_facu", true);
+        msg += validador.validarParametro(args, "boolean", "isFromChangeState", true);
+
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+
+        let documentos = await invoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/buscarDocumentos",
+            {
+                database: "gestionProgramas",
+                coleccion: "facultades",
+                documento: {
+                    "extras.Cod_facultad": parseInt(args.Cod_facultad)
+                },
+            }
+        );
+
+        if (documentos.length === 0 && args.Estado_facu === false && args.isFromChangeState === true) {
+            res.json(reply.error(`La facultad ${args.Descripcion_facu} no es posible activar sin archivos adjuntos.`));
+            return
+        }
+
+        let response = {};
+        let docs = [];
+
+        if (args.docs.length != 0) {
+            for (let i = 0; i < args.docs.length; i++) {
+                const doc = args.docs[i];
+                if (!doc.id) {
+                    //es un nuevo archivo
+                    //buscamos archivos con mismo codigo y nombre
+                    let documentoFind = await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/buscarDocumentos",
+                        {
+                            database: "gestionProgramas",
+                            coleccion: "facultades",
+                            documento: {
+                                "extras.Cod_facultad": parseInt(args.Cod_facultad),
+                                nombre: doc.nombre,
+                            },
+                        }
+                    );
+                    if (documentoFind.length) {
+                        //hay documentos con mismo nombre, se cancela.
+                        res.json(reply.error(`El documento ${doc.nombre} ya existe.`));
+                        return;
+                    };
+                    let param = {
+                        database: "gestionProgramas",
+                        coleccion: "facultades",
+                        id: uuid.v1(),
+                        nombre: doc.nombre,
+                        dataBase64: doc.archivo,
+                        tipo: doc.tipo,
+                        extras: {
+                            Cod_facultad: doc.extras.Cod_facultad,
+                            nombreFacultad: doc.extras.Descripcion_facu,
+                            pesoDocumento: doc.extras.pesoDocumento,
+                            comentarios: doc.extras.comentarios,
+                        },
+                    };
+                    let result = await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/guardarDocumento",
+                        param
+                    );
+                    docs.push(result)
+                }else{
+                    // no es nuervo archivo, por tanto se actualiza
+
+                    let param = {
+                        database: "gestionProgramas",
+                        coleccion: "facultades",
+                        id: doc.id,
+                        nombre: doc.nombre,
+                        dataBase64: new Buffer.from(doc.dataBase64, "base64"),
+                        tipo: doc.tipo,
+                        extras: {
+                            Cod_facultad: doc.extras.Cod_facultad,
+                            nombreFacultad: doc.extras.Descripcion_facu,
+                            pesoDocumento: doc.extras.pesoDocumento,
+                            comentarios: doc.extras.comentarios,
+                        },
+                    };
+
+                    let result = await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/actualizarDocumento",
+                        param
+                    );
+
+                    docs.push(result)
+                }
+            }
+        }
+
+        let newState = args.Estado_facu === true ? false : true
+
+        let params = {
+            codigoFacultad: parseInt(args.Cod_facultad),
+            descripcionFacultad: args.Descripcion_facu,
+            estadoFacultad: args.isFromChangeState  ? (newState ? 1 : 0) : (args.Estado_facu ? 1 : 0), 
+        }
+
+        let updateFacultad = await invoker(
+            global.config.serv_campus,
+            'postgrado/updateFacultades',
+            params
+        );
+
+        response = { dataWasUpdated: updateFacultad, dataUpdated: args.Descripcion_facu }
+        res.json(reply.ok(response));
+    
+    } catch (error) {
+        res.json(reply.fatal(e));
+    }
+}
+
+let deleteFacultad = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "lista", "facultadesToDelete", true);
+
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+
+        let facultadesToDelete = args.facultadesToDelete;
+
+        for (let i = 0; i < facultadesToDelete.length; i++) {
+            const e = facultadesToDelete[i];
+
+            let params = {
+                codigoFacultad: parseInt(e.Cod_facultad),
+            }
+
+            let deleteFacultad = await invoker(
+                global.config.serv_campus,
+                'postgrado/deleteFacultades',
+                params
+            );
+
+            if (!deleteFacultad){
+                res.json(reply.error(`La facultad no pudo ser eliminada.`));
+                return;
+            }
+
+            let documentos = await invoker(
+                global.config.serv_mongoDocumentos,
+                "documentos/buscarDocumentos",
+                {
+                    database: "gestionProgramas",
+                    coleccion: "facultades",
+                    documento: {
+                        "extras.Cod_facultad": e.Cod_facultad
+                    },
+                }
+            );
+
+            for(let d of documentos){
+                await invoker(
+                    global.config.serv_mongoDocumentos,
+                    "documentos/eliminarDocumento",
+                    {
+                        database: 'gestionProgramas',
+                        coleccion: 'facultades',
+                        id: d.id,
+                    }
+                );
+            }
+
+        }
+
+        let response = { dataWasDeleted: true , dataDeleted: facultadesToDelete}
+        res.json(reply.ok(response));
+        
     } catch (e) {
         res.json(reply.fatal(e));
     }
@@ -382,10 +699,17 @@ let deleteDoc = async (req, res) => {
 
 
 module.exports = {
+    //bruto
     bruto_getFacultades,
     bruto_insertFacultad,
     bruto_updateFacultad,
     bruto_deleteFacultad,
+
+    //logica
+    getFacultades,
+    insertFacultad,
+    updateFacultad,
+    deleteFacultad,
 
     //mongo
     getDocumentosWithBinary,
