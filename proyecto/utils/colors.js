@@ -1,4 +1,12 @@
 'use strict';
+const badgeColorMapping = {
+    1: { backgroundColor: '#003c58', textColor: 'white' },    // Para Cod_CategoriaTP = 1
+    2: { backgroundColor: '#ffc107', textColor: 'black' },    // Para Cod_CategoriaTP = 2
+    3: { backgroundColor: '#06717e', textColor: 'white' },    // Para Cod_CategoriaTP = 3
+    4: { backgroundColor: '#28a745', textColor: 'white' },    // Para Cod_CategoriaTP = 4
+    5: { backgroundColor: '#dc3545', textColor: 'white' },    // Para Cod_CategoriaTP = 5
+    // Agrega más mapeos según sea necesario
+};
 
 let getRandomColor = () => {
     const letters = '0123456789ABCDEF';
@@ -26,4 +34,4 @@ function getTextColor(backgroundColor) {
     return getLuminance(backgroundColor) > 0.5 ? 'black' : 'white';
 }
 
-module.exports = { getRandomColor, getTextColor };
+module.exports = { getRandomColor, getTextColor, badgeColorMapping };

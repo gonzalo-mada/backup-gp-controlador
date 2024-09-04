@@ -4,6 +4,7 @@ var reply = require('../../base/utils/reply');
 var validador = require('../../base/utils/validador');
 const uuid = require("uuid");
 const reportInvoker = require("../../base/invokers/report.invoker");
+const { getRandomColor, getTextColor, badgeColorMapping} = require("../utils/colors.js")
 
 // //Se deben llamar a través de una lógica cuando estén listas
 // var unidades_academicas = [
@@ -404,6 +405,7 @@ let deleteDoc = async (req, res) => {
 //NUEVOS SERVICIOS USANDO LOGICA
 let logica_getUnidadesAcademicas = async (req, res) => {
     try {
+        const colorMapping = {};
         // Obtener unidades académicas
         let unidades_academicas = await invoker(
             global.config.serv_basePostgrado,
@@ -418,25 +420,46 @@ let logica_getUnidadesAcademicas = async (req, res) => {
             null
         );
 
-        let facultadesMap = {};
-        facultades.forEach(fac => {
-            facultadesMap[fac.codigo] = {
-                Cod_facultad: fac.codigo,           // Mapeo a la estructura de Facultad
-                Descripcion_facu: fac.descripcion,
-                Estado: fac.estado   // Mapeo a la estructura de Facultad
-            };
+        facultades.forEach(facultad => {
+            const randomColor = getRandomColor();
+            if (!colorMapping[facultad.codigo]) {
+                colorMapping[facultad.codigo] = badgeColorMapping[facultad.codigo] || { backgroundColor: randomColor, textColor: getTextColor(randomColor) };
+            }
         });
 
-        // Mapear las unidades académicas para incluir la facultad
-        let ua_con_facultades = unidades_academicas.map(ua => ({
-            Cod_unidad_academica: ua.coduni,   // Asume que `coduni` es el identificador
-            Descripcion_ua: ua.descripcion,    // Asume que `descripcion` es el nombre
-            Cod_facultad: ua.codfacu,          // Asume que `codfacu` es el identificador de la facultad
-            facultad: facultadesMap[ua.codfacu] || null  // Asocia la facultad si existe
-        }));
+        let listUnidadesAcademicas = unidades_academicas.map( ua => {
+            let facultad = facultades.find( facultad => facultad.codigo === ua.codfacu)
+            return {
+                "Cod_unidad_academica": ua.coduni,
+                "Descripcion_ua" : ua.descripcion,
+                "Facultad": facultad ? {
+                    "Cod_facultad": parseInt(facultad.codigo),
+                    "Descripcion_facu": facultad.descripcion,
+                    "Estado": facultad.estado,
+                    "BadgeClass": colorMapping[facultad.codigo]
+                } : null
+            }
+        })
+
+        // let facultadesMap = {};
+        // facultades.forEach(fac => {
+        //     facultadesMap[fac.codigo] = {
+        //         Cod_facultad: fac.codigo,           // Mapeo a la estructura de Facultad
+        //         Descripcion_facu: fac.descripcion,
+        //         Estado: fac.estado   // Mapeo a la estructura de Facultad
+        //     };
+        // });
+
+        // // Mapear las unidades académicas para incluir la facultad
+        // let ua_con_facultades = unidades_academicas.map(ua => ({
+        //     Cod_unidad_academica: ua.coduni,   // Asume que `coduni` es el identificador
+        //     Descripcion_ua: ua.descripcion,    // Asume que `descripcion` es el nombre
+        //     Cod_facultad: ua.codfacu,          // Asume que `codfacu` es el identificador de la facultad
+        //     facultad: facultadesMap[ua.codfacu] || null  // Asocia la facultad si existe
+        // }));
 
         // Enviar la respuesta con la información combinada
-        res.json(reply.ok(ua_con_facultades));
+        res.json(reply.ok(listUnidadesAcademicas));
     } catch (e) {
         res.json(reply.fatal(e));
     }
@@ -451,7 +474,7 @@ let logica_insertUnidadesAcademicas = async (req, res) => {
 	try {
 		let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
 		let msg = validador.validarParametro(args, "cadena", "Descripcion_ua", true);
-
+        msg += validador.validarParametro(args, "number", "Cod_facultad", true);
         // msg += validador.validarParametro(args, "lista", "docs", false);
 
 		if (msg != "") {
@@ -492,68 +515,63 @@ let logica_insertUnidadesAcademicas = async (req, res) => {
             params
         );
 
-        if (args.docs.length != 0) {
-
-            for (let i = 0; i < args.docs.length; i++) {
-                const doc = args.docs[i];
-                //INSERTAR DOCUMENTO
-                //Busca si no hay documentos con el mismo nombre
-                let documentoFind = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/buscarDocumentos",
-                    {
+        if (!insertUnidadAcademica){
+            res.json(reply.error(`La unidad académica no pudo ser creada.`));
+            return;
+        }else{
+            if (args.docsToUpload.length != 0) {
+                for (let i = 0; i < args.docsToUpload.length; i++) {
+                    const doc = args.docsToUpload[i];
+                    //INSERTAR DOCUMENTO
+                    //Busca si no hay documentos con el mismo nombre
+                    let documentoFind = await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/buscarDocumentos",
+                        {
+                            database: "gestionProgramas",
+                            coleccion: "unidades_academicas",
+                            documento: {
+                                "extras.Cod_unidad_academica": parseInt(codigoUnidadAcad),
+                                nombre: doc.nombre,
+                            },
+                        }
+                    );
+                    if (documentoFind.length) {
+                        //falló la inserción de doc por lo que se borra el registro recién insertado
+                        let params = {
+                            codigoUnidadAcad: parseInt(codigoUnidadAcad),
+                        }
+                        await invoker(
+                            global.config.serv_campus,
+                            'postgrado/deleteCampus',
+                            params
+                        );                    
+                        res.json(reply.error(`El documento ${doc.nombre} ya existe.`));
+                        return;
+                    }
+                    let param = {
                         database: "gestionProgramas",
                         coleccion: "unidades_academicas",
-                        documento: {
-                            "extras.Cod_unidad_academica": parseInt(codigoUnidadAcad),
-                            nombre: doc.nombre,
+                        id: uuid.v1(),
+                        nombre: doc.nombre,
+                        dataBase64: doc.archivo,
+                        tipo: doc.tipo,
+                        extras: {
+                            Cod_unidad_academica: parseInt(codigoUnidadAcad),
+                            nombreUnidadAcad: doc.extras.Descripcion_ua,
+                            pesoDocumento: doc.extras.pesoDocumento,
+                            comentarios: doc.extras.comentarios,
                         },
-                    }
-                );
-                if (documentoFind.length) {
-                    //falló la inserción de doc por lo que se borra el registro recién insertado
-                    let params = {
-                        codigoUnidadAcad: parseInt(codigoUnidadAcad),
-                    }
+                    };
                     await invoker(
-                        global.config.serv_campus,
-                        'postgrado/deleteCampus',
-                        params
-                    );                    
-                    res.json(reply.error(`El documento ${doc.nombre} ya existe.`));
-                    return;
+                        global.config.serv_mongoDocumentos,
+                        "documentos/guardarDocumento",
+                        param
+                    );
                 }
-                let param = {
-                    database: "gestionProgramas",
-                    coleccion: "unidades_academicas",
-                    id: uuid.v1(),
-                    nombre: doc.nombre,
-                    dataBase64: doc.archivo,
-                    tipo: doc.tipo,
-                    extras: {
-                        Cod_unidad_academica: parseInt(codigoUnidadAcad),
-                        nombreUnidadAcad: doc.extras.Descripcion_ua,
-                        pesoDocumento: doc.extras.pesoDocumento,
-                        comentarios: doc.extras.comentarios,
-                    },
-                };
-                let result = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/guardarDocumento",
-                    param
-                );
-                let documento = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/obtenerDocumento",
-                    {
-                        database: "gestionProgramas",
-                        coleccion: "unidades_academicas",
-                        id: result.id,
-                    }
-                );
-                response = { insertUnidadAcademica , documento}
             }
         }
+
         response = { dataWasInserted: insertUnidadAcademica , dataInserted: args.Descripcion_ua}
 
 		res.json(reply.ok(response));
@@ -568,6 +586,7 @@ let logica_updateUnidadesAcademicas = async (req, res) => {
 		let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
         let msg = validador.validarParametro(args, "number", "Cod_unidad_academica", true);
 		msg += validador.validarParametro(args, "cadena", "Descripcion_ua", true);
+        msg += validador.validarParametro(args, "number", "Cod_facultad", true);
 
 		if (msg != "") {
             res.json(reply.error(msg));
@@ -577,9 +596,32 @@ let logica_updateUnidadesAcademicas = async (req, res) => {
         let response = {};
         let docs = [];
 
-        if (args.docs.length != 0) {
-            for (let i = 0; i < args.docs.length; i++) {
-                const doc = args.docs[i];
+        //docs por eliminar
+        if (args.docsToDelete.length != 0) {
+            for (let i = 0; i < args.docsToDelete.length; i++) {
+                const doc = args.docsToDelete[i];
+
+                let deleteDoc = await invoker(
+                    global.config.serv_mongoDocumentos,
+                    "documentos/eliminarDocumento",
+                    {
+                        database: "gestionProgramas",
+                        coleccion: "unidades_academicas",
+                        id: doc.id
+        
+                    }
+                );
+
+                if (!deleteDoc.deleted) {
+                    res.json(reply.error(`El documento no pudo ser eliminado.`));
+                    return;
+                }
+            }
+        }
+
+        if (args.docsToUpload.length != 0) {
+            for (let i = 0; i < args.docsToUpload.length; i++) {
+                const doc = args.docsToUpload[i];
                 if (!doc.id) {
                     //es un nuevo archivo
                     //buscamos archivos con mismo codigo y nombre
@@ -655,14 +697,18 @@ let logica_updateUnidadesAcademicas = async (req, res) => {
             codigoFacultad: args.Cod_facultad
         }
 
-        // Buscar la unidad académica por ID
-        let updateCampus = await invoker(
+        let updateUnidadAcademica = await invoker(
             global.config.serv_basePostgrado,
             'unidadesAcademicas/updateUnidadesAcademicas',
             params
         );
+
+        if (!updateUnidadAcademica){
+            res.json(reply.error(`La unidad académica no pudo ser actualizada.`));
+            return;
+        }
         
-        response = { dataWasUpdated: updateCampus , dataUpdated: args.Descripcion_ua }
+        response = { dataWasUpdated: updateUnidadAcademica , dataUpdated: args.Descripcion_ua }
 		res.json(reply.ok(response));
 
 	} catch (e) {
@@ -689,11 +735,16 @@ let logica_deleteUnidadesAcademicas = async (req, res) => {
                 codigoUnidad: parseInt(e.Cod_unidad_academica),
             }
 
-            await invoker(
+            let deleteUa = await invoker(
                 global.config.serv_basePostgrado,
                 'unidadesAcademicas/deleteUnidadesAcademicas',
                 params
             );
+
+            if (!deleteUa){
+                res.json(reply.error(`La unidad académica no pudo ser eliminada.`));
+                return;
+            }
 
             let documentos = await invoker(
                 global.config.serv_mongoDocumentos,

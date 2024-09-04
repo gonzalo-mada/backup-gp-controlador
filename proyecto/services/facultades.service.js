@@ -337,9 +337,9 @@ let insertFacultad = async (req, res) => {
             res.json(reply.error(`La facultad no pudo ser creada.`));
             return;
         }else{
-            if (args.docs.length != 0) {
-                for (let i = 0; i < args.docs.length; i++) {
-                    const doc = args.docs[i];
+            if (args.docsToUpload.length != 0) {
+                for (let i = 0; i < args.docsToUpload.length; i++) {
+                    const doc = args.docsToUpload[i];
                     //INSERTAR DOCUMENTO
                     //Busca si no hay documentos con el mismo nombre
                     let documentoFind = await invoker(
@@ -430,9 +430,33 @@ let updateFacultad = async (req, res) => {
         let response = {};
         let docs = [];
 
-        if (args.docs.length != 0) {
-            for (let i = 0; i < args.docs.length; i++) {
-                const doc = args.docs[i];
+        //docs por eliminar
+        if (args.docsToDelete.length != 0) {
+            for (let i = 0; i < args.docsToDelete.length; i++) {
+                const doc = args.docsToDelete[i];
+
+                let deleteDoc = await invoker(
+                    global.config.serv_mongoDocumentos,
+                    "documentos/eliminarDocumento",
+                    {
+                        database: "gestionProgramas",
+                        coleccion: "facultades",
+                        id: doc.id
+        
+                    }
+                );
+
+                if (!deleteDoc.deleted) {
+                    res.json(reply.error(`El documento no pudo ser eliminado.`));
+                    return;
+                }
+            }
+        }
+
+
+        if (args.docsToUpload.length != 0) {
+            for (let i = 0; i < args.docsToUpload.length; i++) {
+                const doc = args.docsToUpload[i];
                 if (!doc.id) {
                     //es un nuevo archivo
                     //buscamos archivos con mismo codigo y nombre
@@ -519,7 +543,7 @@ let updateFacultad = async (req, res) => {
         response = { dataWasUpdated: updateFacultad, dataUpdated: args.Descripcion_facu }
         res.json(reply.ok(response));
     
-    } catch (error) {
+    } catch (e) {
         res.json(reply.fatal(e));
     }
 }

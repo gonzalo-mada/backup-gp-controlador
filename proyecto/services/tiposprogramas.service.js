@@ -5,7 +5,7 @@ var validador = require('../../base/utils/validador');
 const uuid = require("uuid");
 const reportInvoker = require("../../base/invokers/report.invoker");
 const { categorias_tp } = require("../services/categorias-tp.service.js")
-const { getRandomColor, getTextColor} = require("../utils/colors.js")
+const { getRandomColor, getTextColor, badgeColorMapping} = require("../utils/colors.js")
 
 var tipos_programas = [
     {
@@ -65,14 +65,7 @@ var tipos_programas_separated = [
     }
 ]
 
-const badgeColorMapping = {
-    1: { backgroundColor: '#003c58', textColor: 'white' },    // Para Cod_CategoriaTP = 1
-    2: { backgroundColor: '#ffc107', textColor: 'black' },    // Para Cod_CategoriaTP = 2
-    3: { backgroundColor: '#06717e', textColor: 'white' },    // Para Cod_CategoriaTP = 3
-    4: { backgroundColor: '#28a745', textColor: 'white' },    // Para Cod_CategoriaTP = 4
-    5: { backgroundColor: '#dc3545', textColor: 'white' },    // Para Cod_CategoriaTP = 5
-    // Agrega más mapeos según sea necesario
-};
+
 const badgeClasses = [
     'p-badge-success',
     'p-badge-danger',
@@ -242,6 +235,7 @@ let getTiposProgramas = async (req , res) => {
                 colorMapping[categoria.codigo] = badgeColorMapping[categoria.codigo] || { backgroundColor: randomColor, textColor: getTextColor(randomColor) };
             }
         });
+        
 
         let listTiposProgramas = tiposProgramas.map( tipo => {
             let categoria = categoriasTp.find( categoria => categoria.codigo === tipo.codcategoria)

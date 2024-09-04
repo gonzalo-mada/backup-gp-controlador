@@ -480,17 +480,14 @@ let logica_getCampus = async (req, res) => {
 let logica_insertCampus = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? '{}' : req.body.arg);
-		// let msg = validador.validarParametro(args, "numero", "Cod_campus", true);
 		let msg = validador.validarParametro(args, "cadena", "Descripcion_campus", true);
         msg += validador.validarParametro(args, "boolean", "Estado_campus", true);
-        // msg += validador.validarParametro(args, "lista", "docs", false);
 
         if (msg != "") {
             res.json(reply.error(msg));
             return;
         }
 
-        let response = {};
         //INSERTAR CAMPUS
         let campus = await invoker(
             global.config.serv_campus,
@@ -521,79 +518,64 @@ let logica_insertCampus = async (req, res) => {
             params
         );
        
-        // insertCampus = insertCampus.map( e => {
-        //     return {
-        //         Cod_campus : e.codigo,
-        //         Descripcion_campus: e.descripcion,
-        //         Estado_campus: e.estado
-        //     }
-        // })
-
-        //condicion para insert campus con docs incluidos
-        if (args.docs.length != 0) {
-            for (let i = 0; i < args.docs.length; i++) {
-                const doc = args.docs[i];
-                //INSERTAR DOCUMENTO
-                //Busca si no hay documentos con el mismo nombre para el campus
-                let documentoFind = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/buscarDocumentos",
-                    {
-                        database: "gestionProgramas",
-                        coleccion: "campus",
-                        documento: {
-                            "extras.Cod_campus": parseInt(codigoCampus),
-                            nombre: doc.nombre,
-                        },
-                    }
-                );
-                if (documentoFind.length) {
-                    //falló la inserción de doc por lo que se borra el campus recién insertado
-                    let params = {
-                        codigoCampus: parseInt(codigoCampus),
-                    }
-                    await invoker(
-                        global.config.serv_campus,
-                        'postgrado/deleteCampus',
-                        params
+        if (!insertCampus) {
+            res.json(reply.error(`El campus no pudo ser creado.`));
+            return;
+        }else{
+            if (args.docsToUpload.length != 0) {
+                for (let i = 0; i < args.docsToUpload.length; i++) {
+                    const doc = args.docsToUpload[i];
+                    //INSERTAR DOCUMENTO
+                    //Busca si no hay documentos con el mismo nombre para el campus
+                    let documentoFind = await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/buscarDocumentos",
+                        {
+                            database: "gestionProgramas",
+                            coleccion: "campus",
+                            documento: {
+                                "extras.Cod_campus": parseInt(codigoCampus),
+                                nombre: doc.nombre,
+                            },
+                        }
                     );
-                    res.json(reply.error(`El documento ${doc.nombre} ya existe.`));
-                    return;
-                }
-                let param = {
-                    database: "gestionProgramas",
-                    coleccion: "campus",
-                    id: uuid.v1(),
-                    nombre: doc.nombre,
-                    dataBase64: doc.archivo,
-                    tipo: doc.tipo,
-                    extras: {
-                        Cod_campus: parseInt(codigoCampus),
-                        nombreCampus: doc.extras.Descripcion_campus,
-                        pesoDocumento: doc.extras.pesoDocumento,
-                        comentarios: doc.extras.comentarios,
-                    },
-                };
-                let result = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/guardarDocumento",
-                    param
-                );
-                let documento = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/obtenerDocumento",
-                    {
+                    if (documentoFind.length) {
+                        //falló la inserción de doc por lo que se borra el campus recién insertado
+                        let params = {
+                            codigoCampus: parseInt(codigoCampus),
+                        }
+                        await invoker(
+                            global.config.serv_campus,
+                            'postgrado/deleteCampus',
+                            params
+                        );
+                        res.json(reply.error(`El documento ${doc.nombre} ya existe.`));
+                        return;
+                    }
+                    let param = {
                         database: "gestionProgramas",
                         coleccion: "campus",
-                        id: result.id,
-                    }
-                );
-                response = { insertCampus , documento}
+                        id: uuid.v1(),
+                        nombre: doc.nombre,
+                        dataBase64: doc.archivo,
+                        tipo: doc.tipo,
+                        extras: {
+                            Cod_campus: parseInt(codigoCampus),
+                            nombreCampus: doc.extras.Descripcion_campus,
+                            pesoDocumento: doc.extras.pesoDocumento,
+                            comentarios: doc.extras.comentarios,
+                        },
+                    };
+                    await invoker(
+                        global.config.serv_mongoDocumentos,
+                        "documentos/guardarDocumento",
+                        param
+                    );
+                }
             }
         }
-        
-        response = { dataWasInserted: insertCampus, dataInserted: args.Descripcion_campus}
-        
+
+        let response = { dataWasInserted: insertCampus, dataInserted: args.Descripcion_campus}
         res.json(reply.ok(response));
 
     } catch (e) {
@@ -608,9 +590,6 @@ let logica_updateCampus = async (req , res) => {
 		msg += validador.validarParametro(args, "boolean", "Estado_campus", true);
 		msg += validador.validarParametro(args, "cadena", "Descripcion_campus", true);
 		msg += validador.validarParametro(args, "boolean", "isFromChangeState", true);
-        // msg += validador.validarParametro(args, "lista", "docs", false);
-
-
 
         if (msg != "") {
             res.json(reply.error(msg));
@@ -640,11 +619,34 @@ let logica_updateCampus = async (req , res) => {
         let response = {};
         let docs = [];
 
+        //docs por eliminar
+        if (args.docsToDelete.length != 0) {
+            for (let i = 0; i < args.docsToDelete.length; i++) {
+                const doc = args.docsToDelete[i];
+
+                let deleteDoc = await invoker(
+                    global.config.serv_mongoDocumentos,
+                    "documentos/eliminarDocumento",
+                    {
+                        database: "gestionProgramas",
+                        coleccion: "campus",
+                        id: doc.id
+        
+                    }
+                );
+
+                if (!deleteDoc.deleted) {
+                    res.json(reply.error(`El documento no pudo ser eliminado.`));
+                    return;
+                }
+            }
+        }
+
         //se parte actualizando documentos ya que puede fallar la subida de docs por mismo archivo
         //condicion para update campus con docs incluidos
-        if (args.docs.length != 0) {
-            for (let i = 0; i < args.docs.length; i++) {
-                const doc = args.docs[i];
+        if (args.docsToUpload.length != 0) {
+            for (let i = 0; i < args.docsToUpload.length; i++) {
+                const doc = args.docsToUpload[i];
                 if (!doc.id) {
                     //es un nuevo archivo
                     //buscamos archivos con mismo codigo y nombre
