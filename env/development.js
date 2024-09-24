@@ -31,7 +31,8 @@ module.exports = {
         { name: 'proyectoBase_medio' },
         { name: "mongoDocumentos" },
         { name: "campus" },
-        { name: "basePostgrado" }
+        { name: "basePostgrado" },
+        { name: "wsfincon" },
     ],
     /** Funciones de ejemplo, eliminar tag 'funciones' si tu proyecto no las necesita */
     funciones: [
