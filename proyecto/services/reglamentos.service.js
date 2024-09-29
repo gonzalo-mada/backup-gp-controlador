@@ -4,59 +4,68 @@ var reply = require('../../base/utils/reply');
 var validador = require('../../base/utils/validador');
 const uuid = require("uuid");
 const reportInvoker = require("../../base/invokers/report.invoker");
-const { getRandomColor, getTextColor, badgeColorMapping} = require("../utils/colors.js")
+const { getRandomColor, getTextColor, badgeColorMapping} = require("../utils/colors.js");
+const { insertDocs } = require('../utils/gpUtils.js');
 
  
 var reglamentos = [
         {
-            "codreglamento": 1,
-            "descripcion": "Reglamento Ejemplo 1",
+            "idReglamento": 1,
+            "descripcionRegla": "Reglamento Ejemplo 1",
             "anio": "2017",
-            "vigencia": 1, //si 1 no 0
+            "vigencia": 'SI', //si 1 no 0
         },
         {
-            "codreglamento": 2,
+            "id": 2,
             "descripcion": "Reglamento Ejemplo 2",
             "anio": "2020",
-            "vigencia": 1, //si 1 no 0
+            "vigencia": 'SI', //si 1 no 0
         },
         {
-            "codreglamento": 3,
+            "id": 3,
             "descripcion": "Reglamento Ejemplo 3",
             "anio": "2024",
-            "vigencia": 1, //si 1 no 0
+            "vigencia": 'Si', //si 1 no 0
         },
         {
-            "codreglamento": 4,
+            "id": 4,
             "descripcion": "Reglamento Ejemplo 4",
             "anio": "2024",
-            "vigencia": 1, //si 1 no 0
+            "vigencia": 'SI', //si 1 no 0
         },
         {
-            "codreglamento": 5,
+            "id": 5,
             "descripcion": "Reglamento Ejemplo 5",
             "anio": "2024",
-            "vigencia": 1, //si 1 no 0
+            "vigencia": 'SI', //si 1 no 0
         },
     ]
 
 let getReglamentos = async (req, res) => {
     try {
         const colorMapping = {};
+        // Obtener unidades académicas
+        let reglamentos = await invoker(
+            global.config.serv_basePostgrado,
+            'reglamento/getReglamento',
+            null
+        );
+        console.log(reglamentos);
+        
         reglamentos.forEach(reglamento => {
             const randomColor = getRandomColor();
-            if (!colorMapping[reglamento.codreglamento]) {
-                colorMapping[reglamento.codreglamento] = badgeColorMapping[reglamento.codreglamento] || { backgroundColor: randomColor, textColor: getTextColor(randomColor) };
+            if (!colorMapping[reglamento.id]) {
+                colorMapping[reglamento.id] = badgeColorMapping[reglamento.id] || { backgroundColor: randomColor, textColor: getTextColor(randomColor) };
             }
         });
  
         let listReglamentos = reglamentos.map( r => {
             return{
-                "Cod_reglamento": r.codreglamento,
+                "Cod_reglamento": r.id,
                 "Descripcion_regla" : r.descripcion,
                 "anio": r.anio,
-                "vigencia": r.vigencia === 1 ? true : false,
-                "BadgeClass": colorMapping[r.codreglamento],
+                "vigencia": r.vigencia === 'SI' ? true : false,
+                "BadgeClass": colorMapping[r.id],
             }
         })
         res.json(reply.ok(listReglamentos));
@@ -66,114 +75,205 @@ let getReglamentos = async (req, res) => {
     } 
 }
 
-let insertReglamento = async (req, res) => {
+// let insertReglamento = async (req, res) => {
     
-	try {
-		let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-		let msg = validador.validarParametro(args, "cadena", "Descripcion_regla", true);
-        //msg += validador.validarParametro(args, "lista", "docs", false);
+// 	try {
+//         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+// 		let msg = validador.validarParametro(args, "cadena", "Descripcion_regla", true);
+//         console.log(args)
 
-		if (msg != "") {
-            res.json(reply.error(msg));
-            return;
+// 		if (msg != "") {
+//             res.json(reply.error(msg));
+//             return;
+//         }
+
+//         let response = {};
+
+//         // Verificar si ya existe un reglamento con la misma descripción
+//         let reglamentos = await invoker(
+//             global.config.serv_basePostgrado,
+//             'reglamento/getReglamento',
+//             null
+//         );
+//         console.log(reglamentos)
+
+//         let reglaExist = reglamentos.some(r => 
+//             String(r.descripcion).toLowerCase() === String(args.Descripcion_regla).toLowerCase()
+//         );
+
+//         if (reglaExist) {
+//             res.json(reply.error(`El reglamento ${args.Descripcion_regla} ya existe.`));
+//             return;
+//         }
+
+//         // Generar un nuevo código de reglamento
+//         let ultimoObjeto = reglamentos[reglamentos.length - 1];
+//         let ultimoCodigo = ultimoObjeto.id;
+//         let codigoReglamento = ultimoCodigo + 1; 
+
+// 		let params = {
+// 			idReglamento: parseInt(codigoReglamento),
+// 			descripcionRegla: args.Descripcion_regla,
+//             anio: args.anio,
+//             vigencia: args.vigencia === true ? 'SI' : 'NO'
+// 		}
+//         console.log(params)
+
+// 		let insertReglamento = await invoker(
+//             global.config.serv_basePostgrado,
+//             'reglamento/insertReglamento',
+//             params
+//         );
+
+//         if (!insertReglamento) {
+//             res.json(reply.error(`El reglamento no pudo ser creado.`));
+//             return;
+//         } else {
+//             try {
+//                 // Insertar documentos relacionados al reglamento
+//                 await insertDocs({
+//                     arrayDocs: args.docsToUpload,
+//                     coleccion: 'reglamentos',
+//                     extrasKeyCode: 'Cod_reglamento',
+//                     extrasValueCode: codigoReglamento,
+//                     extrasKeyDescription: 'nombreReglamento',
+//                     extrasValueDescription: args.Descripcion_regla
+//                 });
+//             } catch (error) {
+//                 let params = {
+//                     idReglamento: parseInt(codigoReglamento),
+//                 }
+//                 await invoker(
+//                     global.config.serv_basePostgrado,
+//                     'reglamento/deleteReglamento',
+//                     params
+//                 );
+//                 res.json(reply.error(`Error al insertar documento.`));
+//                 return;
+//             }
+//         }
+
+//         response = { dataWasInserted: insertReglamento , dataInserted: args.Descripcion_regla }
+
+// 		res.json(reply.ok(response));
+
+// 	} catch (error) {
+// 		res.json(reply.fatal(error));
+// 	}
+// }
+
+let insertReglamento = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "cadena", "Descripcion_regla", true);
+        
+        if (msg !== "") {
+            return res.json(reply.error(msg));
         }
 
         let response = {};
 
+        // Verificar si ya existe un reglamento con la misma descripción
+        let reglamentos = await invoker(
+            global.config.serv_basePostgrado,
+            'reglamento/getReglamento',
+            null
+        );
+
+        let reglaExist = reglamentos.some(r => 
+            String(r.descripcion).toLowerCase() === String(args.Descripcion_regla).toLowerCase()
+        );
+
+        if (reglaExist) {
+            return res.json(reply.error(`El reglamento ${args.Descripcion_regla} ya existe.`));
+        }
+
+        // Generar un nuevo código de reglamento
         let ultimoObjeto = reglamentos[reglamentos.length - 1];
-        let ultimoCodigo = ultimoObjeto.codreglamento; //id objeto bruto
+        let ultimoCodigo = ultimoObjeto.id;
         let codigoReglamento = ultimoCodigo + 1; 
 
-		let newReglamento = {
-			codreglamento: codigoReglamento,
-			descripcion: args.Descripcion_regla,
+        let params = {
+            idReglamento: parseInt(codigoReglamento),
+            descripcionRegla: args.Descripcion_regla,
             anio: args.anio,
-            vigencia: args.vigencia === true ? 1 : 0
-		}
-		reglamentos.push(newReglamento);
+            vigencia: args.vigencia === true ? 'SI' : 'NO'
+        };
 
-        if (args.docsToUpload.length != 0) {
+        let insertReglamento = await invoker(
+            global.config.serv_basePostgrado,
+            'reglamento/insertReglamento',
+            params
+        );
 
-            for (let i = 0; i < args.docsToUpload.length; i++) {
-                const doc = args.docsToUpload[i];
-                //INSERTAR DOCUMENTO
-                //Busca si no hay documentos con el mismo nombre
-                let documentoFind = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/buscarDocumentos",
-                    {
-                        database: "gestionProgramas",
-                        coleccion: "reglamentos",
-                        documento: {
-                            "extras.Cod_reglamento": parseInt(codigoReglamento),
+        if (!insertReglamento) {
+            return res.json(reply.error(`El reglamento no pudo ser creado.`));
+        } else {
+            try {
+                // Insertar documentos relacionados al reglamento
+                await insertDocs({
+                    arrayDocs: args.docsToUpload.map(doc => {
+                        // Aquí convertimos el archivo base64 a un Buffer
+                        const buffer = Buffer.from(doc.archivo, 'base64');
+                        
+                        // Suponiendo que tu esquema de MongoDB requiere el archivo en un campo separado
+                        return {
                             nombre: doc.nombre,
-                        },
-                    }
-                );
-                if (documentoFind.length) {
-                    //falló la inserción de doc por lo que se borra el registro recién insertado
-                    reglamentos = reglamentos.filter( r => r.Cod_reglamento !== codigoReglamento)
-                    res.json(reply.error(`El documento ${doc.nombre} ya existe.`));
-                    return;
-                }
-                let param = {
-                    database: "gestionProgramas",
-                    coleccion: "reglamentos",
-                    id: uuid.v1(),
-                    nombre: doc.nombre,
-                    dataBase64: doc.archivo,
-                    tipo: doc.tipo,
-                    extras: {
-                        Cod_reglamento: parseInt(codigoReglamento),
-                        nombreReglamento: doc.extras.Descripcion_regla,
-                        pesoDocumento: doc.extras.pesoDocumento,
-                        comentarios: doc.extras.comentarios,
-                    },
+                            tipo: doc.tipo,
+                            archivo: buffer, // O guarda el archivo en un lugar físico y guarda la ruta
+                            extras: {
+                                comentarios: doc.extras.comentarios,
+                                pesoDocumento: doc.extras.pesoDocumento
+                            }
+                        };
+                    }),
+                    coleccion: 'reglamentos',
+                    extrasKeyCode: 'Cod_reglamento',
+                    extrasValueCode: codigoReglamento,
+                    extrasKeyDescription: 'nombreReglamento',
+                    extrasValueDescription: args.Descripcion_regla
+                });
+            } catch (error) {
+                let params = {
+                    idReglamento: parseInt(codigoReglamento),
                 };
-                let result = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/guardarDocumento",
-                    param
+                await invoker(
+                    global.config.serv_basePostgrado,
+                    'reglamento/deleteReglamento',
+                    params
                 );
-                let documento = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/obtenerDocumento",
-                    {
-                        database: "gestionProgramas",
-                        coleccion: "reglamentos",
-                        id: result.id,
-                    }
-                );
-                response = { dataWasInserted: newReglamento , dataInserted: args.Descripcion_regla}
+                return res.json(reply.error(`Error al insertar documento: ${error.message}`));
             }
         }
 
-		res.json(reply.ok(response));
+        response = { dataWasInserted: insertReglamento, dataInserted: args.Descripcion_regla };
+        return res.json(reply.ok(response));
 
-	} catch (error) {
-		res.json(reply.fatal(error));
-	}
-}
+    } catch (error) {
+        return res.json(reply.fatal(error));
+    }
+};
+
 
 let updateReglamento = async (req, res) => {
-	try {
-		let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
         let msg = validador.validarParametro(args, "number", "Cod_reglamento", true);
-		msg += validador.validarParametro(args, "cadena", "Descripcion_regla", true);
+        msg += validador.validarParametro(args, "cadena", "Descripcion_regla", true);
+        msg += validador.validarParametro(args, "number", "anio", true); // Si es necesario validar el año.
+        msg += validador.validarParametro(args, "boolean", "vigencia", true); // Para la vigencia como true o false.
 
-		if (msg != "") {
+        if (msg != "") {
             res.json(reply.error(msg));
             return;
         }
 
         let response = {};
-        let docs = [];
-
-        //docs por eliminar
+        
+        // Eliminar documentos
         if (args.docsToDelete.length != 0) {
             for (let i = 0; i < args.docsToDelete.length; i++) {
                 const doc = args.docsToDelete[i];
-
                 let deleteDoc = await invoker(
                     global.config.serv_mongoDocumentos,
                     "documentos/eliminarDocumento",
@@ -181,10 +281,8 @@ let updateReglamento = async (req, res) => {
                         database: "gestionProgramas",
                         coleccion: "reglamentos",
                         id: doc.id
-        
                     }
                 );
-
                 if (!deleteDoc.deleted) {
                     res.json(reply.error(`El documento no pudo ser eliminado.`));
                     return;
@@ -192,98 +290,43 @@ let updateReglamento = async (req, res) => {
             }
         }
 
-        if (args.docsToUpload.length != 0) {
-            for (let i = 0; i < args.docsToUpload.length; i++) {
-                const doc = args.docsToUpload[i];
-                if (!doc.id) {
-                    //es un nuevo archivo
-                    //buscamos archivos con mismo codigo y nombre
-                    let documentoFind = await invoker(
-                        global.config.serv_mongoDocumentos,
-                        "documentos/buscarDocumentos",
-                        {
-                            database: "gestionProgramas",
-                            coleccion: "reglamentos",
-                            documento: {
-                                "extras.Cod_reglamento": parseInt(args.Cod_reglamento),
-                                nombre: doc.nombre,
-                            },
-                        }
-                    );
-                    if (documentoFind.length) {
-                        //hay documentos con mismo nombre, se cancela.
-                        res.json(reply.error(`El documento ${doc.nombre} ya existe.`));
-                        return;
-                    };
+        // Subir y actualizar documentos
+        await updateDocs({
+            arrayDocs: args.docsToUpload,
+            coleccion: 'reglamentos',
+            extrasKeyCode: 'Cod_reglamento',
+            extrasValueCode: args.Cod_reglamento,
+            extrasKeyDescription: 'nombreReglamento',
+            extrasValueDescription: args.Descripcion_regla
+        });
 
-                    let param = {
-                        database: "gestionProgramas",
-                        coleccion: "reglamentos",
-                        id: uuid.v1(),
-                        nombre: doc.nombre,
-                        dataBase64: doc.archivo,
-                        tipo: doc.tipo,
-                        extras: {
-                            Cod_reglamento: doc.extras.Cod_reglamento,
-                            nombreReglamento: doc.extras.Descripcion_regla,
-                            pesoDocumento: doc.extras.pesoDocumento,
-                            comentarios: doc.extras.comentarios,
-                        },
-                    };
-                    let result = await invoker(
-                        global.config.serv_mongoDocumentos,
-                        "documentos/guardarDocumento",
-                        param
-                    );
-                    docs.push(result)
-                }else{
-                    // no es nuervo archivo, por tanto se actualiza
+        // Actualizar reglamento
+        let params = {
+            idReglamento: parseInt(codigoReglamento),
+			descripcionRegla: args.Descripcion_regla,
+            anio: args.anio,
+            vigencia: args.vigencia === true ? 'SI' : 'NO'
+        };
 
-                    let param = {
-                        database: "gestionProgramas",
-                        coleccion: "reglamentos",
-                        id: doc.id,
-                        nombre: doc.nombre,
-                        dataBase64: new Buffer.from(doc.dataBase64, "base64"),
-                        tipo: doc.tipo,
-                        extras: {
-                            Cod_reglamento: doc.extras.Cod_reglamento,
-                            nombreReglamento: doc.extras.Descripcion_regla,
-                            pesoDocumento: doc.extras.pesoDocumento,
-                            comentarios: doc.extras.comentarios,
-                        },
-                    };
+        let updateReglamento = await invoker(
+            global.config.serv_basePostgrado,
+            'reglamento/updateReglamento',
+            params
+        );
 
-                    let result = await invoker(
-                        global.config.serv_mongoDocumentos,
-                        "documentos/actualizarDocumento",
-                        param
-                    );
-
-                    docs.push(result)
-                }
-            }
-        }
-
-
-        let reglamentoToUpdate = reglamentos.find(r => r.Cod_reglamento === args.Cod_reglamento);
-        //Modificar en bruto
-        if (!reglamentoToUpdate) {
-            res.json(reply.error("Reglamento no encontrado"));
+        if (!updateReglamento) {
+            res.json(reply.error(`El reglamento no pudo ser actualizado.`));
             return;
         }
-        
-        // Actualizar descripción de reglamento
-        reglamentoToUpdate.Descripcion_regla = args.Descripcion_regla;
 
-        response = { dataWasUpdated: reglamentoToUpdate , dataUpdated: args.Descripcion_regla }
+        response = { dataWasUpdated: updateReglamento, dataUpdated: args.Descripcion_regla };
+        res.json(reply.ok(response));
 
-		res.json(reply.ok(response));
-
-	} catch (e) {
-		res.json(reply.fatal(e));
-	}
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
 }
+
 
 let deleteReglamentos = async (req, res) => {
     try {
@@ -296,10 +339,24 @@ let deleteReglamentos = async (req, res) => {
         }
 
         let reglamentoToDelete = args.reglamentoToDelete;
-        
+
         for (let i = 0; i < reglamentoToDelete.length; i++) {
             const e = reglamentoToDelete[i];
-            reglamentos = reglamentos.filter( r => r.Cod_reglamento !== e.Cod_reglamento)
+
+            let params = {
+                cod_reglamento: parseInt(e.Cod_reglamento),
+            };
+
+            let deleteRegla = await invoker(
+                global.config.serv_basePostgrado,
+                'reglamento/deleteReglamento',
+                params
+            );
+
+            if (!deleteRegla) {
+                res.json(reply.error(`El reglamento con código ${e.Cod_reglamento} no pudo ser eliminado.`));
+                return;
+            }
 
             let documentos = await invoker(
                 global.config.serv_mongoDocumentos,
@@ -313,7 +370,7 @@ let deleteReglamentos = async (req, res) => {
                 }
             );
 
-            for(let d of documentos){
+            for (let d of documentos) {
                 await invoker(
                     global.config.serv_mongoDocumentos,
                     "documentos/eliminarDocumento",
@@ -326,13 +383,14 @@ let deleteReglamentos = async (req, res) => {
             }
         }
 
-        let response = { dataWasDeleted: true , dataDeleted: reglamentoToDelete}
+        let response = { dataWasDeleted: true, dataDeleted: reglamentoToDelete };
         res.json(reply.ok(response));
 
     } catch (e) {
         res.json(reply.fatal(e));
     }
 }
+
 
 let getDocumentosWithBinary = async (req, res) => {
 
@@ -441,15 +499,16 @@ let deleteDoc = async (req, res) => {
 
 module.exports = {
 
-    getReglamentos,
-    insertReglamento,
-    updateReglamento,
-    deleteReglamentos,
-
      //mongo
      getDocumentosWithBinary,
      getArchiveDoc,
      deleteDoc,
+
+     //logicas
+     getReglamentos,
+     insertReglamento,
+     updateReglamento,
+     deleteReglamentos,
 }
 
 /*
