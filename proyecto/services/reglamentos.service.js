@@ -162,6 +162,7 @@ let getReglamentos = async (req, res) => {
 // 	}
 // }
 
+
 let insertReglamento = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
@@ -260,50 +261,62 @@ let updateReglamento = async (req, res) => {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
         let msg = validador.validarParametro(args, "number", "Cod_reglamento", true);
         msg += validador.validarParametro(args, "cadena", "Descripcion_regla", true);
-        msg += validador.validarParametro(args, "number", "anio", true); // Si es necesario validar el año.
-        msg += validador.validarParametro(args, "boolean", "vigencia", true); // Para la vigencia como true o false.
-
-        if (msg != "") {
-            res.json(reply.error(msg));
-            return;
+        msg += validador.validarParametro(args, "number", "anio", true); // Validar el año si es necesario.
+        msg += validador.validarParametro(args, "boolean", "vigencia", true); // Validar la vigencia como true o false.
+        
+        if (msg !== "") {
+            return res.json(reply.error(msg));
         }
 
         let response = {};
         
-        // Eliminar documentos
-        if (args.docsToDelete.length != 0) {
-            for (let i = 0; i < args.docsToDelete.length; i++) {
-                const doc = args.docsToDelete[i];
+        // Eliminar documentos si es necesario
+        if (args.docsToDelete && args.docsToDelete.length > 0) {
+            for (let doc of args.docsToDelete) {
                 let deleteDoc = await invoker(
                     global.config.serv_mongoDocumentos,
                     "documentos/eliminarDocumento",
                     {
                         database: "gestionProgramas",
                         coleccion: "reglamentos",
-                        id: doc.id
+                        id: doc.id // Asumimos que el documento tiene un ID único para eliminar.
                     }
                 );
                 if (!deleteDoc.deleted) {
-                    res.json(reply.error(`El documento no pudo ser eliminado.`));
-                    return;
+                    return res.json(reply.error(`El documento ${doc.nombre} no pudo ser eliminado.`));
                 }
             }
         }
 
         // Subir y actualizar documentos
-        await updateDocs({
-            arrayDocs: args.docsToUpload,
-            coleccion: 'reglamentos',
-            extrasKeyCode: 'Cod_reglamento',
-            extrasValueCode: args.Cod_reglamento,
-            extrasKeyDescription: 'nombreReglamento',
-            extrasValueDescription: args.Descripcion_regla
-        });
+        if (args.docsToUpload && args.docsToUpload.length > 0) {
+            await updateDocs({
+                arrayDocs: args.docsToUpload.map(doc => {
+                    // Convertir el archivo base64 a un Buffer
+                    const buffer = Buffer.from(doc.archivo, 'base64');
+                    
+                    return {
+                        nombre: doc.nombre,
+                        tipo: doc.tipo,
+                        archivo: buffer, // O la ruta si se guarda en el sistema de archivos.
+                        extras: {
+                            comentarios: doc.extras.comentarios,
+                            pesoDocumento: doc.extras.pesoDocumento
+                        }
+                    };
+                }),
+                coleccion: 'reglamentos',
+                extrasKeyCode: 'Cod_reglamento',
+                extrasValueCode: args.Cod_reglamento,
+                extrasKeyDescription: 'nombreReglamento',
+                extrasValueDescription: args.Descripcion_regla
+            });
+        }
 
         // Actualizar reglamento
         let params = {
-            idReglamento: parseInt(codigoReglamento),
-			descripcionRegla: args.Descripcion_regla,
+            idReglamento: parseInt(args.Cod_reglamento),
+            descripcionRegla: args.Descripcion_regla,
             anio: args.anio,
             vigencia: args.vigencia === true ? 'SI' : 'NO'
         };
@@ -315,31 +328,31 @@ let updateReglamento = async (req, res) => {
         );
 
         if (!updateReglamento) {
-            res.json(reply.error(`El reglamento no pudo ser actualizado.`));
-            return;
+            return res.json(reply.error(`El reglamento no pudo ser actualizado.`));
         }
 
         response = { dataWasUpdated: updateReglamento, dataUpdated: args.Descripcion_regla };
-        res.json(reply.ok(response));
+        return res.json(reply.ok(response));
 
-    } catch (e) {
-        res.json(reply.fatal(e));
+    } catch (error) {
+        return res.json(reply.fatal(error));
     }
-}
-
+};
 
 let deleteReglamentos = async (req, res) => {
     try {
+        // Parsear los argumentos recibidos
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        
+        // Validar que se haya proporcionado una lista de reglamentos a eliminar
         let msg = validador.validarParametro(args, "lista", "reglamentoToDelete", true);
-
-        if (msg != "") {
-            res.json(reply.error(msg));
-            return;
+        if (msg !== "") {
+            return res.json(reply.error(msg));
         }
 
         let reglamentoToDelete = args.reglamentoToDelete;
 
+        // Iterar sobre cada reglamento que se desea eliminar
         for (let i = 0; i < reglamentoToDelete.length; i++) {
             const e = reglamentoToDelete[i];
 
@@ -347,6 +360,7 @@ let deleteReglamentos = async (req, res) => {
                 cod_reglamento: parseInt(e.Cod_reglamento),
             };
 
+            // Eliminar el reglamento
             let deleteRegla = await invoker(
                 global.config.serv_basePostgrado,
                 'reglamento/deleteReglamento',
@@ -354,10 +368,10 @@ let deleteReglamentos = async (req, res) => {
             );
 
             if (!deleteRegla) {
-                res.json(reply.error(`El reglamento con código ${e.Cod_reglamento} no pudo ser eliminado.`));
-                return;
+                return res.json(reply.error(`El reglamento con código ${e.Cod_reglamento} no pudo ser eliminado.`));
             }
 
+            // Buscar los documentos asociados al reglamento
             let documentos = await invoker(
                 global.config.serv_mongoDocumentos,
                 "documentos/buscarDocumentos",
@@ -370,8 +384,9 @@ let deleteReglamentos = async (req, res) => {
                 }
             );
 
+            // Eliminar todos los documentos asociados
             for (let d of documentos) {
-                await invoker(
+                let deleteDoc = await invoker(
                     global.config.serv_mongoDocumentos,
                     "documentos/eliminarDocumento",
                     {
@@ -380,16 +395,21 @@ let deleteReglamentos = async (req, res) => {
                         id: d.id,
                     }
                 );
+                
+                if (!deleteDoc.deleted) {
+                    return res.json(reply.error(`El documento con ID ${d.id} no pudo ser eliminado.`));
+                }
             }
         }
 
+        // Respuesta exitosa si todo fue eliminado correctamente
         let response = { dataWasDeleted: true, dataDeleted: reglamentoToDelete };
-        res.json(reply.ok(response));
+        return res.json(reply.ok(response));
 
-    } catch (e) {
-        res.json(reply.fatal(e));
+    } catch (error) {
+        return res.json(reply.fatal(error));
     }
-}
+};
 
 
 let getDocumentosWithBinary = async (req, res) => {
@@ -588,3 +608,143 @@ module.exports = {
 
 // Buscar reglamento por ID
 */
+
+
+
+// let updateReglamento = async (req, res) => {
+//     try {
+//         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+//         let msg = validador.validarParametro(args, "number", "Cod_reglamento", true);
+//         msg += validador.validarParametro(args, "cadena", "Descripcion_regla", true);
+//         msg += validador.validarParametro(args, "number", "anio", true); // Si es necesario validar el año.
+//         msg += validador.validarParametro(args, "boolean", "vigencia", true); // Para la vigencia como true o false.
+        
+//         if (msg != "") {
+//             res.json(reply.error(msg));
+//             return;
+//         }
+
+//         let response = {};
+        
+//         // Eliminar documentos
+//         if (args.docsToDelete.length != 0) {
+//             for (let i = 0; i < args.docsToDelete.length; i++) {
+//                 const doc = args.docsToDelete[i];
+//                 let deleteDoc = await invoker(
+//                     global.config.serv_mongoDocumentos,
+//                     "documentos/eliminarDocumento",
+//                     {
+//                         database: "gestionProgramas",
+//                         coleccion: "reglamentos",
+//                         id: doc.id
+//                     }
+//                 );
+//                 if (!deleteDoc.deleted) {
+//                     res.json(reply.error(`El documento no pudo ser eliminado.`));
+//                     return;
+//                 }
+//             }
+//         }
+
+//         // Subir y actualizar documentos
+//         await updateDocs({
+//             arrayDocs: args.docsToUpload,
+//             coleccion: 'reglamentos',
+//             extrasKeyCode: 'Cod_reglamento',
+//             extrasValueCode: args.Cod_reglamento,
+//             extrasKeyDescription: 'nombreReglamento',
+//             extrasValueDescription: args.Descripcion_regla
+//         });
+
+//         // Actualizar reglamento
+//         let params = {
+//             idReglamento: parseInt(codigoReglamento),
+// 			descripcionRegla: args.Descripcion_regla,
+//             anio: args.anio,
+//             vigencia: args.vigencia === true ? 'SI' : 'NO'
+//         };
+
+//         let updateReglamento = await invoker(
+//             global.config.serv_basePostgrado,
+//             'reglamento/updateReglamento',
+//             params
+//         );
+
+//         if (!updateReglamento) {
+//             res.json(reply.error(`El reglamento no pudo ser actualizado.`));
+//             return;
+//         }
+
+//         response = { dataWasUpdated: updateReglamento, dataUpdated: args.Descripcion_regla };
+//         res.json(reply.ok(response));
+
+//     } catch (e) {
+//         res.json(reply.fatal(e));
+//     }
+// }
+
+
+// let deleteReglamentos = async (req, res) => {
+//     try {
+//         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+//         let msg = validador.validarParametro(args, "lista", "reglamentoToDelete", true);
+
+//         if (msg != "") {
+//             res.json(reply.error(msg));
+//             return;
+//         }
+
+//         let reglamentoToDelete = args.reglamentoToDelete;
+
+//         for (let i = 0; i < reglamentoToDelete.length; i++) {
+//             const e = reglamentoToDelete[i];
+
+//             let params = {
+//                 cod_reglamento: parseInt(e.Cod_reglamento),
+//             };
+
+//             let deleteRegla = await invoker(
+//                 global.config.serv_basePostgrado,
+//                 'reglamento/deleteReglamento',
+//                 params
+//             );
+
+//             if (!deleteRegla) {
+//                 res.json(reply.error(`El reglamento con código ${e.Cod_reglamento} no pudo ser eliminado.`));
+//                 return;
+//             }
+
+//             let documentos = await invoker(
+//                 global.config.serv_mongoDocumentos,
+//                 "documentos/buscarDocumentos",
+//                 {
+//                     database: "gestionProgramas",
+//                     coleccion: "reglamentos",
+//                     documento: {
+//                         "extras.Cod_reglamento": e.Cod_reglamento
+//                     },
+//                 }
+//             );
+
+//             for (let d of documentos) {
+//                 await invoker(
+//                     global.config.serv_mongoDocumentos,
+//                     "documentos/eliminarDocumento",
+//                     {
+//                         database: 'gestionProgramas',
+//                         coleccion: 'reglamentos',
+//                         id: d.id,
+//                     }
+//                 );
+//             }
+//         }
+
+//         let response = { dataWasDeleted: true, dataDeleted: reglamentoToDelete };
+//         res.json(reply.ok(response));
+
+//     } catch (e) {
+//         res.json(reply.fatal(e));
+//     }
+// }
+
+
