@@ -1,7 +1,7 @@
 'use strict';
 
 let formatDateToSQL  = (isoDate) => {
-    console.log("isoDAte",typeof isoDate, isoDate, isoDate.length);
+    // console.log("isoDAte",typeof isoDate, isoDate, isoDate.length);
     
     const [day, month, year] = isoDate.split('-');
     return `${year}-${month}-${day}`

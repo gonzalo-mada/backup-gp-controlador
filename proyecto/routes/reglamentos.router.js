@@ -15,6 +15,5 @@ router.post('/deleteReglamentos', services.deleteReglamentos);
 //mongo
 router.post('/getDocumentosWithBinary', services.getDocumentosWithBinary);
 router.post('/getArchiveDoc', services.getArchiveDoc);
-router.post('/deleteDoc', services.deleteDoc);
 
 module.exports = router;

@@ -49,21 +49,21 @@ listTiemposAcred = [
 ]
 
 const campos_ea = {
-    "Cod_acreditacion" : "codigoAcred", //aqui nombre que puso ariel
+    "Cod_acreditacion" : "codigoEstadoAcred", //aqui nombre que puso ariel
     "Acreditado" : "acreditado",
     "Certificado" : "certificado",
-    "Evaluacion_interna" : "evaluacionInt",
+    "Evaluacion_interna" : "evaInterna",
     "Nombre_ag_acredit" : "nombreAgAcred",
     "Nombre_ag_certif" : "nombreAgCert",
     "Fecha_informe" : "fechaInforme",
-    "Cod_tiempoacredit" : "tiempoAcred"
+    "Cod_tiempoacredit" : "codigoTiempoAcred"
 }
 
 const campos_ta = {
-    "Cod_tiempoacredit" : "codigo",
+    "Cod_tiempoacredit" : "codigoTiempoAcred",
     "Fecha_inicio" : "fechaInicio",
     "Fecha_termino" : "fechaTermino",
-    "Cantidad_anios" : "cantAnios"
+    "Cantidad_anios" : "cantidad"
 }
 
 
@@ -82,22 +82,22 @@ let getEstadosAcreditacion = async (req, res) => {
                 null
             );
         }
-
+        
         let listMerge = listEstadosAcred.map( ea => {
-            let tiempos = listTiemposAcred.find( tiempos => tiempos[campos_ta.Cod_tiempoacredit] === ea[campos_ea.Cod_tiempoacredit])
+            let tiempos = listTiemposAcred.find( tiempos => tiempos.codigo === ea.codigoAcred)
             return {
-                "Cod_acreditacion" : ea[campos_ea.Cod_acreditacion],
+                "Cod_acreditacion" : ea.codigoAcred,
                 "Acreditado" : ea[campos_ea.Acreditado],
                 "Certificado" : ea[campos_ea.Certificado],
                 "Nombre_ag_acredit" : ea[campos_ea.Nombre_ag_acredit],
                 "Nombre_ag_certif" : ea[campos_ea.Nombre_ag_certif],
-                "Evaluacion_interna" : ea[campos_ea.Evaluacion_interna],
+                "Evaluacion_interna" : ea.evaluacionInt,
                 "Fecha_informe" : formatDateGp(ea[campos_ea.Fecha_informe]),
                 "tiempo" : tiempos ? {
-                    "Cod_tiempoacredit" : tiempos[campos_ta.Cod_tiempoacredit],
+                    "Cod_tiempoacredit" : tiempos.codigo,
                     "Fecha_inicio" : formatDateGp(tiempos[campos_ta.Fecha_inicio]),
                     "Fecha_termino" : formatDateGp(tiempos[campos_ta.Fecha_termino]),
-                    "Cantidad_anios" : tiempos[campos_ta.Cantidad_anios]
+                    "Cantidad_anios" : tiempos.cantAnios
                 } : null
             }
         })
@@ -146,8 +146,8 @@ let insertEstadoAcreditacion = async (req, res) => {
         let switchCertificado = normalizeSwitch(args.Certificado, 'certificado')
         let switchEvaluacionInterna = normalizeSwitch(args.Evaluacion_interna, 'evaluacion')
                 
-        let codigo_ea = getNextCodigo(listEstadosAcred,campos_ea.Cod_acreditacion);
-        let codigo_ta = getNextCodigo(listTiemposAcred,campos_ta.Cod_tiempoacredit);
+        let codigo_ea = getNextCodigo(listEstadosAcred,'codigoAcred');
+        let codigo_ta = getNextCodigo(listTiemposAcred,'codigo');
 
         let params_ta = {
             [campos_ta.Cod_tiempoacredit]: parseInt(codigo_ta),
@@ -216,7 +216,7 @@ let insertEstadoAcreditacion = async (req, res) => {
             return;
         }else{
             try {
-                await insertDocs({
+                let resultInsertDoc = await insertDocs({
                     arrayDocs: args.docsToUpload,
                     coleccion: 'estados_acreditacion',
                     extrasKeyCode: campos_ea.Cod_acreditacion,
@@ -224,6 +224,8 @@ let insertEstadoAcreditacion = async (req, res) => {
                     extrasKeyDescription: 'nombreAgencia',
                     extrasValueDescription: switchAcreditado === 'SI' ? args.Nombre_ag_acredit : args.Nombre_ag_certif
                 });
+                console.log("resultInsertDoc",resultInsertDoc);
+                
             } catch (error) {
                 //error al insertar documento entonces se elimina el registro recién creado
                 if (haveLogica) {
@@ -258,7 +260,7 @@ let insertEstadoAcreditacion = async (req, res) => {
 let updateEstadoAcreditacion = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        console.log("args",args);
+        // console.log("args from update",args);
         
         let msg = validador.validarParametro(args, "date", "Fecha_informe", true);
         msg += validador.validarParametro(args, "numero", "Cod_acreditacion", true);
@@ -432,26 +434,16 @@ let deleteEstadoAcreditacion = async (req, res) => {
             let deleteTiemposAcred;
 
             if (haveLogica) {
-                console.log("entre aqui");
-                console.log("params_ea",params_ea);
-                
                 deleteEstadosAcred = await invoker (
                     global.config.serv_basePostgrado,
                     `${ea.s}/${ea.delete}`,
                     params_ea
                 );
-                console.log("sali aqui");
-                console.log("deleteEstadosAcred",deleteEstadosAcred);
-                
-                
-                console.log("entre aqui 2")
                 deleteTiemposAcred = await invoker (
                     global.config.serv_basePostgrado,
                     `${ta.s}/${ta.delete}`,
                     params_ta
                 );
-                console.log("sali aqui 2")
-                console.log("deleteTiemposAcred",deleteTiemposAcred);
             }else{
                 deleteEstadosAcred = listEstadosAcred = listEstadosAcred.filter( eA => eA[campos_ea.Cod_acreditacion] != parseInt(e.Cod_acreditacion))
                 deleteTiemposAcred = listTiemposAcred = listTiemposAcred.filter( tA => tA[campos_ta.Cod_tiempoacredit] != parseInt(e.Cod_tiempoacredit))
@@ -491,8 +483,6 @@ let deleteEstadoAcreditacion = async (req, res) => {
         let response = { dataWasDeleted: true , dataDeleted: estadosAcreditacionToDelete}
         res.json(reply.ok(response));
     } catch (e) {
-        console.log("error",e);
-        
         res.json(reply.fatal(e));
     }
 }

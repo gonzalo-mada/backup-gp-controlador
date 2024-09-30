@@ -2,74 +2,27 @@
 var invoker = require('../../base/invokers/invoker.invoker');
 var reply = require('../../base/utils/reply');
 var validador = require('../../base/utils/validador');
-const uuid = require("uuid");
 const reportInvoker = require("../../base/invokers/report.invoker");
-const { getRandomColor, getTextColor, badgeColorMapping} = require("../utils/colors.js");
-const { insertDocs } = require('../utils/gpUtils.js');
-
- 
-var reglamentos = [
-        {
-            "idReglamento": 1,
-            "descripcionRegla": "Reglamento Ejemplo 1",
-            "anio": "2017",
-            "vigencia": 'SI', //si 1 no 0
-        },
-        {
-            "id": 2,
-            "descripcion": "Reglamento Ejemplo 2",
-            "anio": "2020",
-            "vigencia": 'SI', //si 1 no 0
-        },
-        {
-            "id": 3,
-            "descripcion": "Reglamento Ejemplo 3",
-            "anio": "2024",
-            "vigencia": 'Si', //si 1 no 0
-        },
-        {
-            "id": 4,
-            "descripcion": "Reglamento Ejemplo 4",
-            "anio": "2024",
-            "vigencia": 'SI', //si 1 no 0
-        },
-        {
-            "id": 5,
-            "descripcion": "Reglamento Ejemplo 5",
-            "anio": "2024",
-            "vigencia": 'SI', //si 1 no 0
-        },
-    ]
+const { getNextCodigo, insertDocs, updateDocs } = require('../utils/gpUtils')
 
 let getReglamentos = async (req, res) => {
     try {
-        const colorMapping = {};
-        // Obtener unidades académicas
         let reglamentos = await invoker(
             global.config.serv_basePostgrado,
             'reglamento/getReglamento',
             null
         );
-        console.log(reglamentos);
-        
-        reglamentos.forEach(reglamento => {
-            const randomColor = getRandomColor();
-            if (!colorMapping[reglamento.id]) {
-                colorMapping[reglamento.id] = badgeColorMapping[reglamento.id] || { backgroundColor: randomColor, textColor: getTextColor(randomColor) };
-            }
-        });
- 
-        let listReglamentos = reglamentos.map( r => {
-            return{
-                "Cod_reglamento": r.id,
-                "Descripcion_regla" : r.descripcion,
-                "anio": r.anio,
-                "vigencia": r.vigencia === 'SI' ? true : false,
-                "BadgeClass": colorMapping[r.id],
+
+        reglamentos = reglamentos.map( e => {
+            return {
+                Cod_reglamento: e.id,
+                Descripcion_regla: e.descripcion,
+                anio: e.anio.toString(),
+                vigencia: e.vigencia === 'SI' ? true : false
             }
         })
-        res.json(reply.ok(listReglamentos));
-
+        
+        res.json(reply.ok(reglamentos));
     } catch (e) {
         res.json(reply.fatal(e));
     } 
@@ -91,29 +44,15 @@ let insertReglamento = async (req, res) => {
             null
         );
 
-        let response = {};
-
-
-        let reglaExist = reglamentos.some(r => 
-            String(r.descripcion).toLowerCase() === String(args.Descripcion_regla).toLowerCase()
-        );
-
-        if (reglaExist) {
-            return res.json(reply.error(`El reglamento ${args.Descripcion_regla} ya existe.`));
-        }
-
-        let ultimoObjeto = reglamentos[reglamentos.length - 1];
-        let ultimoCodigo = ultimoObjeto.id;
-        let codigoReglamento = ultimoCodigo + 1; 
+        let codigo_susp = getNextCodigo(reglamentos,'id');
 
         let params = {
-            idReglamento: parseInt(codigoReglamento),
+            idReglamento: parseInt(codigo_susp),
             descripcionRegla: args.Descripcion_regla,
             anio: args.anio,
             vigencia: args.vigencia === true ? 'SI' : 'NO'
         };
 
-        
         let insertReglamento = await invoker(
             global.config.serv_basePostgrado,
             'reglamento/insertReglamento',
@@ -125,28 +64,16 @@ let insertReglamento = async (req, res) => {
         }else{
             try {
                 await insertDocs({
-                    arrayDocs: args.docsToUpload.map(doc => {
-                        const buffer = Buffer.from(doc.archivo, 'base64');
-                        
-                        return {
-                            nombre: doc.nombre,
-                            tipo: doc.tipo,
-                            archivo: buffer,
-                            extras: {
-                                comentarios: doc.extras.comentarios,
-                                pesoDocumento: doc.extras.pesoDocumento
-                            }
-                        };
-                    }),
+                    arrayDocs: args.docsToUpload,
                     coleccion: 'reglamentos',
-                    extrasKeyCode: Cod_reglamento,
-                    extrasValueCode: codigoReglamento,
-                    extrasKeyDescription: 'nombreReglamento',
+                    extrasKeyCode: 'Cod_reglamento',
+                    extrasValueCode: codigo_susp,
+                    extrasKeyDescription: 'nombreSuspension',
                     extrasValueDescription: args.Descripcion_regla
                 })
             } catch (error) {
-            let params = {
-                    idReglamento: parseInt(codigoReglamento),
+                let params = {
+                    idReglamento: parseInt(codigo_susp),
                 };
                 await invoker(
                     global.config.serv_basePostgrado,
@@ -157,9 +84,8 @@ let insertReglamento = async (req, res) => {
             }
         }
 
-        response = { dataWasInserted: insertReglamento, dataInserted: args.Descripcion_regla };
+        let response = { dataWasInserted: insertReglamento, dataInserted: args.Descripcion_regla };
         return res.json(reply.ok(response));
-
     } catch (error) {
         return res.json(reply.fatal(error));
     }
@@ -178,8 +104,6 @@ let updateReglamento = async (req, res) => {
             return;
         }
 
-        let response = {};
-
         // Eliminar documentos si es necesario
         if (args.docsToDelete && args.docsToDelete.length > 0) {
             for (let doc of args.docsToDelete) {
@@ -189,7 +113,7 @@ let updateReglamento = async (req, res) => {
                     {
                         database: "gestionProgramas",
                         coleccion: "reglamentos",
-                        id: doc.id // Asumimos que el documento tiene un ID único para eliminar.
+                        id: doc.id 
                     }
                 );
 
@@ -199,25 +123,19 @@ let updateReglamento = async (req, res) => {
             }
         }
 
-        // Subir y actualizar documentos
-        let uploadedDocsResponse = {};
-        if (args.docsToUpload && args.docsToUpload.length > 0) {
-            uploadedDocsResponse = await new Promise((resolve, reject) => {
-                updateDocs({
-                    arrayDocs: args.docsToUpload,
-                    coleccion: 'reglamentos',
-                    extrasKeyCode: 'Cod_reglamento',
-                    extrasValueCode: args.Cod_reglamento,
-                    extrasKeyDescription: 'nombreReglamento',
-                    extrasValueDescription: args.Descripcion_regla
-                }).then(resolve).catch(reject);
-            });
-        }
+        await updateDocs({
+            arrayDocs: args.docsToUpload,
+            coleccion: 'reglamentos',
+            extrasKeyCode: 'Cod_reglamento',
+            extrasValueCode: args.Cod_reglamento,
+            extrasKeyDescription: 'nombreSuspension',
+            extrasValueDescription: args.Descripcion_regla
+        });
 
         // Actualizar reglamento
         let params = {
-            codigoReglamento: parseInt(args.Cod_reglamento),
-            descripcionReglamento: args.Descripcion_regla,
+            idReglamento: parseInt(args.Cod_reglamento),
+            descripcionRegla: args.Descripcion_regla,
             anio: args.anio,
             vigencia: args.vigencia === true ? 'SI' : 'NO'
         };
@@ -227,12 +145,12 @@ let updateReglamento = async (req, res) => {
             'reglamento/updateReglamento',
             params
         );
-
+        
         if (!updateReglamento) {
             return res.json(reply.error(`El reglamento no pudo ser actualizado.`));
         }
 
-        response = { dataWasUpdated: updateReglamento, dataUpdated: args.Descripcion_regla, uploadedDocsResponse };
+        let response = { dataWasUpdated: updateReglamento, dataUpdated: args.Descripcion_regla, };
         return res.json(reply.ok(response));
 
     } catch (error) {
@@ -244,7 +162,6 @@ let deleteReglamentos = async (req, res) => {
     try {
         // Parsear los argumentos recibidos
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        
         // Validar que se haya proporcionado una lista de reglamentos a eliminar
         let msg = validador.validarParametro(args, "lista", "reglamentoToDelete", true);
         if (msg !== "") {
@@ -390,40 +307,12 @@ let getArchiveDoc = async (req, res) => {
     }
 };
 
-let deleteDoc = async (req, res) => {
-
-    try {
-        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        let msg = validador.validarParametro(args, "cadena","Cod_reglamento", true);
- 
-        if (msg != "") {
-            res.json(reply.error(msg));
-            return;
-        }
- 
-        let deleteDoc = await invoker(
-            global.config.serv_mongoDocumentos,
-            "documentos/eliminarDocumento",
-            {
-                database: "gestionProgramas",
-                coleccion: "reglamentos",
-                id: args.Cod_reglamento
-
-            }
-        );
-
-        res.json(reply.ok(deleteDoc));
-    } catch (e) {
-        res.json(reply.fatal(e));
-    }
-}
 
 module.exports = {
 
      //mongo
      getDocumentosWithBinary,
      getArchiveDoc,
-     deleteDoc,
 
      //logicas
      getReglamentos,
