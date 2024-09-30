@@ -75,94 +75,6 @@ let getReglamentos = async (req, res) => {
     } 
 }
 
-// let insertReglamento = async (req, res) => {
-    
-// 	try {
-//         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-// 		let msg = validador.validarParametro(args, "cadena", "Descripcion_regla", true);
-//         console.log(args)
-
-// 		if (msg != "") {
-//             res.json(reply.error(msg));
-//             return;
-//         }
-
-//         let response = {};
-
-//         // Verificar si ya existe un reglamento con la misma descripción
-//         let reglamentos = await invoker(
-//             global.config.serv_basePostgrado,
-//             'reglamento/getReglamento',
-//             null
-//         );
-//         console.log(reglamentos)
-
-//         let reglaExist = reglamentos.some(r => 
-//             String(r.descripcion).toLowerCase() === String(args.Descripcion_regla).toLowerCase()
-//         );
-
-//         if (reglaExist) {
-//             res.json(reply.error(`El reglamento ${args.Descripcion_regla} ya existe.`));
-//             return;
-//         }
-
-//         // Generar un nuevo código de reglamento
-//         let ultimoObjeto = reglamentos[reglamentos.length - 1];
-//         let ultimoCodigo = ultimoObjeto.id;
-//         let codigoReglamento = ultimoCodigo + 1; 
-
-// 		let params = {
-// 			idReglamento: parseInt(codigoReglamento),
-// 			descripcionRegla: args.Descripcion_regla,
-//             anio: args.anio,
-//             vigencia: args.vigencia === true ? 'SI' : 'NO'
-// 		}
-//         console.log(params)
-
-// 		let insertReglamento = await invoker(
-//             global.config.serv_basePostgrado,
-//             'reglamento/insertReglamento',
-//             params
-//         );
-
-//         if (!insertReglamento) {
-//             res.json(reply.error(`El reglamento no pudo ser creado.`));
-//             return;
-//         } else {
-//             try {
-//                 // Insertar documentos relacionados al reglamento
-//                 await insertDocs({
-//                     arrayDocs: args.docsToUpload,
-//                     coleccion: 'reglamentos',
-//                     extrasKeyCode: 'Cod_reglamento',
-//                     extrasValueCode: codigoReglamento,
-//                     extrasKeyDescription: 'nombreReglamento',
-//                     extrasValueDescription: args.Descripcion_regla
-//                 });
-//             } catch (error) {
-//                 let params = {
-//                     idReglamento: parseInt(codigoReglamento),
-//                 }
-//                 await invoker(
-//                     global.config.serv_basePostgrado,
-//                     'reglamento/deleteReglamento',
-//                     params
-//                 );
-//                 res.json(reply.error(`Error al insertar documento.`));
-//                 return;
-//             }
-//         }
-
-//         response = { dataWasInserted: insertReglamento , dataInserted: args.Descripcion_regla }
-
-// 		res.json(reply.ok(response));
-
-// 	} catch (error) {
-// 		res.json(reply.fatal(error));
-// 	}
-// }
-
-
 let insertReglamento = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
@@ -263,13 +175,15 @@ let updateReglamento = async (req, res) => {
         msg += validador.validarParametro(args, "cadena", "Descripcion_regla", true);
         msg += validador.validarParametro(args, "number", "anio", true); // Validar el año si es necesario.
         msg += validador.validarParametro(args, "boolean", "vigencia", true); // Validar la vigencia como true o false.
-        
+
         if (msg !== "") {
-            return res.json(reply.error(msg));
+            res.json(reply.error(msg));
+            return;
         }
 
         let response = {};
-        
+        let docs = [];
+
         // Eliminar documentos si es necesario
         if (args.docsToDelete && args.docsToDelete.length > 0) {
             for (let doc of args.docsToDelete) {
@@ -282,8 +196,10 @@ let updateReglamento = async (req, res) => {
                         id: doc.id // Asumimos que el documento tiene un ID único para eliminar.
                     }
                 );
+
                 if (!deleteDoc.deleted) {
-                    return res.json(reply.error(`El documento ${doc.nombre} no pudo ser eliminado.`));
+                    res.json(reply.error(`El documento ${doc.nombre} no pudo ser eliminado.`));
+                    return;
                 }
             }
         }
@@ -291,20 +207,7 @@ let updateReglamento = async (req, res) => {
         // Subir y actualizar documentos
         if (args.docsToUpload && args.docsToUpload.length > 0) {
             await updateDocs({
-                arrayDocs: args.docsToUpload.map(doc => {
-                    // Convertir el archivo base64 a un Buffer
-                    const buffer = Buffer.from(doc.archivo, 'base64');
-                    
-                    return {
-                        nombre: doc.nombre,
-                        tipo: doc.tipo,
-                        archivo: buffer, // O la ruta si se guarda en el sistema de archivos.
-                        extras: {
-                            comentarios: doc.extras.comentarios,
-                            pesoDocumento: doc.extras.pesoDocumento
-                        }
-                    };
-                }),
+                arrayDocs: args.docsToUpload,
                 coleccion: 'reglamentos',
                 extrasKeyCode: 'Cod_reglamento',
                 extrasValueCode: args.Cod_reglamento,
@@ -315,8 +218,8 @@ let updateReglamento = async (req, res) => {
 
         // Actualizar reglamento
         let params = {
-            idReglamento: parseInt(args.Cod_reglamento),
-            descripcionRegla: args.Descripcion_regla,
+            codigoReglamento: parseInt(args.Cod_reglamento),
+            descripcionReglamento: args.Descripcion_regla,
             anio: args.anio,
             vigencia: args.vigencia === true ? 'SI' : 'NO'
         };
@@ -328,16 +231,18 @@ let updateReglamento = async (req, res) => {
         );
 
         if (!updateReglamento) {
-            return res.json(reply.error(`El reglamento no pudo ser actualizado.`));
+            res.json(reply.error(`El reglamento no pudo ser actualizado.`));
+            return;
         }
 
         response = { dataWasUpdated: updateReglamento, dataUpdated: args.Descripcion_regla };
-        return res.json(reply.ok(response));
+        res.json(reply.ok(response));
 
     } catch (error) {
-        return res.json(reply.fatal(error));
+        res.json(reply.fatal(error));
     }
 };
+
 
 let deleteReglamentos = async (req, res) => {
     try {
