@@ -33,6 +33,7 @@ module.exports = {
         { name: "campus" },
         { name: "basePostgrado" },
         { name: "wsfincon" },
+        { name: "conveniosFormulario" }
     ],
     /** Funciones de ejemplo, eliminar tag 'funciones' si tu proyecto no las necesita */
     funciones: [

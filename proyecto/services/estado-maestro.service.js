@@ -7,11 +7,11 @@ const { getNextCodigo, insertDocs, updateDocs } = require('../utils/gpUtils')
 
 let listEstadosMaestros = [];
 
-const haveLogica = false;
+const haveLogica = true;
 
 const em = {
-    "s" : "aca nombre servicio",
-    "get": "nombre s get"
+    "s" : "estado",
+    "get": "getEstadosMaestros"
 };
 
 
@@ -33,8 +33,8 @@ listEstadosMaestros = [
 
 
 const campos_em = {
-    "Cod_EstadoMaestro" : "Cod_EstadoMaestro", //aqui nombre ariel
-    "Descripcion_EstadoMaestro": "Descripcion_EstadoMaestro"
+    "Cod_EstadoMaestro" : "codigo", //aqui nombre ariel
+    "Descripcion_EstadoMaestro": "descripcion"
 };
 
 
@@ -48,6 +48,12 @@ let getEstadosMaestros = async (req, res) => {
                 null
             );
         }
+        listEstadosMaestros = listEstadosMaestros.map( e => {
+            return {
+                Cod_EstadoMaestro: e[campos_em.Cod_EstadoMaestro],
+                Descripcion_EstadoMaestro: e[campos_em.Descripcion_EstadoMaestro]
+            }
+        });
         res.json(reply.ok(listEstadosMaestros));
     } catch (e) {
         res.json(reply.fatal(e));
@@ -56,6 +62,7 @@ let getEstadosMaestros = async (req, res) => {
 
 
 module.exports = {
+    em,
     campos_em,
     listEstadosMaestros,
     getEstadosMaestros,

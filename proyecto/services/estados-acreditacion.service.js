@@ -10,20 +10,20 @@ const { getNextCodigo, insertDocs, updateDocs, formatDateGp } = require('../util
 let listEstadosAcred = [];
 let listTiemposAcred = [];
 
-const haveLogica = false ;
+const haveLogica = true;
 const ea = {
-    "s" : "ACA NOMBRE SERVICIO",
-    "get" : "nombre s get",
-    "insert" : "nombre s insert",
-    "update" : "nombre s update",
-    "delete" : "nombre s delete",
+    "s" : "estado",
+    "get" : "getEstadosAcreditacion",
+    "insert" : "insertEstadoAcreditacion",
+    "update" : "updateEstadoAcreditacion",
+    "delete" : "deleteEstadoAcreditacion",
 }
 const ta = {
-    "s" : "ACA NOMBRE SERVICIO",
-    "get" : "nombre s get",
-    "insert" : "nombre s insert",
-    "update" : "nombre s update",
-    "delete" : "nombre s delete",
+    "s" : "tiempoAcreditacion",
+    "get" : "getTiempoAcreditacion",
+    "insert" : "insertTiempoAcreditacion",
+    "update" : "updateTiempoAcreditacion",
+    "delete" : "deleteTiempoAcreditacion",
 }
 
 listEstadosAcred = [
@@ -49,21 +49,21 @@ listTiemposAcred = [
 ]
 
 const campos_ea = {
-    "Cod_acreditacion" : "Cod_acreditacion", //aqui nombre que puso ariel
-    "Acreditado" : "Acreditado",
-    "Certificado" : "Certificado",
-    "Evaluacion_interna" : "Evaluacion_interna",
-    "Nombre_ag_acredit" : "Nombre_ag_acredit",
-    "Nombre_ag_certif" : "Nombre_ag_certif",
-    "Fecha_informe" : "Fecha_informe",
-    "Cod_tiempoacredit" : "Cod_tiempoacredit"
+    "Cod_acreditacion" : "codigoAcred", //aqui nombre que puso ariel
+    "Acreditado" : "acreditado",
+    "Certificado" : "certificado",
+    "Evaluacion_interna" : "evaluacionInt",
+    "Nombre_ag_acredit" : "nombreAgAcred",
+    "Nombre_ag_certif" : "nombreAgCert",
+    "Fecha_informe" : "fechaInforme",
+    "Cod_tiempoacredit" : "tiempoAcred"
 }
 
 const campos_ta = {
-    "Cod_tiempoacredit" : "Cod_tiempoacredit",
-    "Fecha_inicio" : "Fecha_inicio",
-    "Fecha_termino" : "Fecha_termino",
-    "Cantidad_anios" : "Cantidad_anios"
+    "Cod_tiempoacredit" : "codigo",
+    "Fecha_inicio" : "fechaInicio",
+    "Fecha_termino" : "fechaTermino",
+    "Cantidad_anios" : "cantAnios"
 }
 
 
@@ -403,7 +403,9 @@ let updateEstadoAcreditacion = async (req, res) => {
     }
 }
 
-let deleteEstadoAcreditacion = async (req, res) => {
+let 
+
+= async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
         let msg = validador.validarParametro(args, "lista", "estadosAcreditacionToDelete", true);
@@ -419,13 +421,13 @@ let deleteEstadoAcreditacion = async (req, res) => {
             const e = estadosAcreditacionToDelete[i];
 
             let params_ea = {
-                [campos_ea.Cod_acreditacion]: parseInt(e.Cod_acreditacion)
+                "codigoEstadoAcred": parseInt(e.Cod_acreditacion)
             }
 
             let params_ta = {
-                [campos_ta.Cod_tiempoacredit]: parseInt(e.Cod_tiempoacredit),
+                [campos_ta.Cod_tiempoacredit]: parseInt(e.tiempo.Cod_tiempoacredit),
             }
-
+            
             let deleteEstadosAcred;
             let deleteTiemposAcred;
 
@@ -435,7 +437,7 @@ let deleteEstadoAcreditacion = async (req, res) => {
                     `${ea.s}/${ea.delete}`,
                     params_ea
                 );
-
+                
                 deleteTiemposAcred = await invoker (
                     global.config.serv_basePostgrado,
                     `${ta.s}/${ta.delete}`,

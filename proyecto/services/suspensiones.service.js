@@ -4,13 +4,14 @@ var reply = require('../../base/utils/reply');
 var validador = require('../../base/utils/validador');
 const reportInvoker = require("../../base/invokers/report.invoker");
 const { getNextCodigo, insertDocs, updateDocs } = require('../utils/gpUtils')
-const { campos_em, listEstadosMaestros } = require("./estado-maestro.service")
+const { em, campos_em } = require("./estado-maestro.service")
 
 let listSuspension = [];
-const haveLogica = false;
+let listEstadosMaestros = [];
+const haveLogica = true;
 const susp = {
-    "s" : "ACA NOMBRE SERVICIO",
-    "get" : "nombre s get",
+    "s" : "suspension",
+    "get" : "getSupension",
     "insert" : "nombre s insert",
     "update" : "nombre s update",
     "delete" : "nombre s delete",
@@ -19,21 +20,31 @@ const susp = {
 listSuspension = [
     {
         "ID_TipoSuspension": 1,
-        "Descripcion_TipoSuspension": "Sin estudiantes",
-        "Cod_EstadoMaestro": 3
+        "Descripcion_TipoSuspension": "Temporal",
+        "Cod_EstadoMaestro": 2
+    },
+    {
+        "ID_TipoSuspension": 2,
+        "Descripcion_TipoSuspension": "Indefinida",
+        "Cod_EstadoMaestro": 2
     }
 ];
 
 const campos_susp = {
-    "ID_TipoSuspension": "ID_TipoSuspension",
-    "Descripcion_TipoSuspension": "Descripcion_TipoSuspension",
-    "Cod_EstadoMaestro": "Cod_EstadoMaestro"
+    "ID_TipoSuspension": "id",
+    "Descripcion_TipoSuspension": "descripcion",
+    "Cod_EstadoMaestro": "codigoEstM"
 };
 
 let getSuspensiones = async (req, res) => {
     try {
         if (haveLogica) {
             listEstadosMaestros = await invoker(
+                global.config.serv_basePostgrado,
+                `${em.s}/${em.get}`,
+                null
+            );
+            listSuspension = await invoker(
                 global.config.serv_basePostgrado,
                 `${susp.s}/${susp.get}`,
                 null
@@ -80,7 +91,7 @@ let insertSuspension = async (req, res) => {
         let params = {
             [campos_susp.ID_TipoSuspension]: parseInt(codigo_susp),
             [campos_susp.Descripcion_TipoSuspension]: args.Descripcion_TipoSuspension,
-            [campos_susp.Cod_EstadoMaestro]: 3
+            [campos_susp.Cod_EstadoMaestro]: 2
         };
 
         let insertSuspension;
@@ -175,7 +186,7 @@ let updateSuspension = async (req, res) => {
         let params = {
             [campos_susp.ID_TipoSuspension]: args.ID_TipoSuspension,
             [campos_susp.Descripcion_TipoSuspension]: args.Descripcion_TipoSuspension,
-            [campos_susp.Cod_EstadoMaestro]: 3
+            [campos_susp.Cod_EstadoMaestro]: 2
         };
 
         let updateSuspension;
