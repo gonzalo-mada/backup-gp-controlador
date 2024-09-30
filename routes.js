@@ -12,6 +12,7 @@ module.exports = (app, rootPath) => {
     app.use(`/${rootPath}/tiposprogramas`, require("./proyecto/routes/tiposprogramas.router"));
     app.use(`/${rootPath}/categorias-tp`, require("./proyecto/routes/categorias-tp.router"));
     app.use(`/${rootPath}/unidadesAcademicas`, require("./proyecto/routes/unidadesAcademicas.router"));
+    app.use(`/${rootPath}/reglamentos`, require("./proyecto/routes/reglamentos.router"));
     app.use(`/${rootPath}/estados_acreditacion`, require("./proyecto/routes/estados-acreditacion.router"));
     app.use(`/${rootPath}/programas`, require("./proyecto/routes/programas.router"));
     app.use(`/${rootPath}/estado_maestro`, require("./proyecto/routes/estado-maestro.router"));
