@@ -12,9 +12,9 @@ const haveLogica = true;
 const susp = {
     "s" : "suspension",
     "get" : "getSupension",
-    "insert" : "nombre s insert",
-    "update" : "nombre s update",
-    "delete" : "nombre s delete",
+    "insert" : "insertSuspension",
+    "update" : "updateSuspension",
+    "delete" : "deleteSupension",
 };
 
 listSuspension = [
@@ -31,8 +31,8 @@ listSuspension = [
 ];
 
 const campos_susp = {
-    "ID_TipoSuspension": "id",
-    "Descripcion_TipoSuspension": "descripcion",
+    "ID_TipoSuspension": "idTipoSusp",
+    "Descripcion_TipoSuspension": "descripcionSusp",
     "Cod_EstadoMaestro": "codigoEstM"
 };
 
@@ -52,10 +52,10 @@ let getSuspensiones = async (req, res) => {
         }
 
         let listMerge = listSuspension.map( susp => {
-            let em = listEstadosMaestros.find( em => em[campos_em.Cod_EstadoMaestro] === susp[campos_susp.Cod_EstadoMaestro])
+            let em = listEstadosMaestros.find( em => em[campos_em.Cod_EstadoMaestro] === susp.codigoEstM)
             return {
-                "ID_TipoSuspension": susp[campos_susp.ID_TipoSuspension],
-                "Descripcion_TipoSuspension": susp[campos_susp.Descripcion_TipoSuspension],
+                "ID_TipoSuspension": susp.id,
+                "Descripcion_TipoSuspension": susp.descripcion,
                 "estadomaestro" : em ? {
                     "Cod_EstadoMaestro": em[campos_em.Cod_EstadoMaestro],
                     "Descripcion_EstadoMaestro": em[campos_em.Descripcion_EstadoMaestro],
@@ -86,12 +86,11 @@ let insertSuspension = async (req, res) => {
             );
         }
 
-        let codigo_susp = getNextCodigo(listSuspension,campos_susp.ID_TipoSuspension);
+        let codigo_susp = getNextCodigo(listSuspension,'id');
 
         let params = {
             [campos_susp.ID_TipoSuspension]: parseInt(codigo_susp),
             [campos_susp.Descripcion_TipoSuspension]: args.Descripcion_TipoSuspension,
-            [campos_susp.Cod_EstadoMaestro]: 2
         };
 
         let insertSuspension;
@@ -186,7 +185,6 @@ let updateSuspension = async (req, res) => {
         let params = {
             [campos_susp.ID_TipoSuspension]: args.ID_TipoSuspension,
             [campos_susp.Descripcion_TipoSuspension]: args.Descripcion_TipoSuspension,
-            [campos_susp.Cod_EstadoMaestro]: 2
         };
 
         let updateSuspension;
