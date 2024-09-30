@@ -403,9 +403,7 @@ let updateEstadoAcreditacion = async (req, res) => {
     }
 }
 
-let 
-
-= async (req, res) => {
+let deleteEstadoAcreditacion = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
         let msg = validador.validarParametro(args, "lista", "estadosAcreditacionToDelete", true);
@@ -419,6 +417,8 @@ let
 
         for (let i = 0; i < estadosAcreditacionToDelete.length; i++) {
             const e = estadosAcreditacionToDelete[i];
+            console.log("e",e);
+            
 
             let params_ea = {
                 "codigoEstadoAcred": parseInt(e.Cod_acreditacion)
@@ -432,17 +432,26 @@ let
             let deleteTiemposAcred;
 
             if (haveLogica) {
+                console.log("entre aqui");
+                console.log("params_ea",params_ea);
+                
                 deleteEstadosAcred = await invoker (
                     global.config.serv_basePostgrado,
                     `${ea.s}/${ea.delete}`,
                     params_ea
                 );
+                console.log("sali aqui");
+                console.log("deleteEstadosAcred",deleteEstadosAcred);
                 
+                
+                console.log("entre aqui 2")
                 deleteTiemposAcred = await invoker (
                     global.config.serv_basePostgrado,
                     `${ta.s}/${ta.delete}`,
                     params_ta
                 );
+                console.log("sali aqui 2")
+                console.log("deleteTiemposAcred",deleteTiemposAcred);
             }else{
                 deleteEstadosAcred = listEstadosAcred = listEstadosAcred.filter( eA => eA[campos_ea.Cod_acreditacion] != parseInt(e.Cod_acreditacion))
                 deleteTiemposAcred = listTiemposAcred = listTiemposAcred.filter( tA => tA[campos_ta.Cod_tiempoacredit] != parseInt(e.Cod_tiempoacredit))
@@ -482,6 +491,8 @@ let
         let response = { dataWasDeleted: true , dataDeleted: estadosAcreditacionToDelete}
         res.json(reply.ok(response));
     } catch (e) {
+        console.log("error",e);
+        
         res.json(reply.fatal(e));
     }
 }
