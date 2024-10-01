@@ -1,7 +1,5 @@
-var reply = require('../../base/utils/reply');
 const uuid = require("uuid");
 var invoker = require('../../base/invokers/invoker.invoker');
-const dateFormat = require('dateformat');
 
 const getNextCodigo = (data, atributo) => {
     try {
@@ -97,7 +95,6 @@ const insertDocs = async ({arrayDocs, coleccion, extrasKeyCode, extrasValueCode,
         }
     }
 };
-
 
 const updateDocs = async ({arrayDocs , coleccion, extrasKeyCode, extrasValueCode, extrasKeyDescription , extrasValueDescription}) => {
     if (!arrayDocs || arrayDocs.length == 0) {

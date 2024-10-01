@@ -1,10 +1,6 @@
 'use strict';
 var invoker = require('../../base/invokers/invoker.invoker');
 var reply = require('../../base/utils/reply');
-var validador = require('../../base/utils/validador');
-const reportInvoker = require("../../base/invokers/report.invoker");
-const { getNextCodigo, insertDocs, updateDocs } = require('../utils/gpUtils')
-
 let listEstadosMaestros = [];
 
 const haveLogica = true;
@@ -30,14 +26,10 @@ listEstadosMaestros = [
     }
 ];
 
-
-
 const campos_em = {
     "Cod_EstadoMaestro" : "codigo", //aqui nombre ariel
     "Descripcion_EstadoMaestro": "descripcion"
 };
-
-
 
 let getEstadosMaestros = async (req, res) => {
     try {
@@ -59,7 +51,6 @@ let getEstadosMaestros = async (req, res) => {
         res.json(reply.fatal(e));
     }
 };
-
 
 module.exports = {
     em,

@@ -82,7 +82,6 @@ let insertFacultad = async (req, res) => {
             'postgrado/insertFacultades',
             params
         );
-        console.log("intento 1 de insert facultad");
         
         if (!insertFacultad){
             res.json(reply.error(`La facultad no pudo ser creada.`));
@@ -112,7 +111,6 @@ let insertFacultad = async (req, res) => {
         }
 
         response = { dataWasInserted: insertFacultad , dataInserted: args.Descripcion_facu}
-        console.log("response",response);
         res.json(reply.ok(response));
     } catch (e) {
         res.json(reply.fatal(e));
