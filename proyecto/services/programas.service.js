@@ -166,7 +166,6 @@ let getProgramas = async (req,res) => {
     try {
         const token = req.headers.authorization;
         const dataDecrypt = await decryptToken(token);
-        console.log("data",dataDecrypt);  
 
         if (haveLogica) {
             listProgramas = await invoker(

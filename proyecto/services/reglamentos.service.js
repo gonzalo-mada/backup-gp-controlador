@@ -175,7 +175,7 @@ let deleteReglamentos = async (req, res) => {
             const e = reglamentoToDelete[i];
 
             let params = {
-                cod_reglamento: parseInt(e.Cod_reglamento),
+                idReglamento: parseInt(e.Cod_reglamento),
             };
 
             // Eliminar el reglamento
