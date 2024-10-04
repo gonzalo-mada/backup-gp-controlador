@@ -28,9 +28,6 @@ let getJornadas = async (req, res) => {
     }
 }
 
-
-
-
 module.exports = {
 
     //data en bruto
