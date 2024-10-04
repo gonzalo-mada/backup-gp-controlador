@@ -22,10 +22,10 @@ var modalidades = [
     }
 ]
 
-let getModalidad = async (req, res) => {
+let getModalidades = async (req, res) => {
 
     try {
-        res.json(reply.ok(modalidad));
+        res.json(reply.ok(modalidades));
     } catch (e) {
         res.json(reply.fatal(e));
     }
@@ -34,5 +34,5 @@ let getModalidad = async (req, res) => {
 module.exports = {
 
     //data en bruto
-    getModalidad
+    getModalidades
 }
