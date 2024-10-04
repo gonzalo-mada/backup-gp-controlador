@@ -9,5 +9,6 @@ var router = express.Router();
 //data en bruto jornadas
 router.post('/getModalidades', services.getModalidades);
 
+router.post('/insertModalidad', services.insertModalidad);
 
 module.exports = router;

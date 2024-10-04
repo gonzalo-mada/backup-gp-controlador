@@ -31,8 +31,13 @@ let getModalidades = async (req, res) => {
     }
 }
 
+let insertModalidad = async (req, res) =>{
+    
+}
+
 module.exports = {
 
     //data en bruto
-    getModalidades
+    getModalidades,
+    insertModalidad
 }
