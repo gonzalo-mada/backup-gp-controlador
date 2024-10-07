@@ -12,6 +12,4 @@ router.post('/insertJornada', services.insertJornada);
 router.post('/updateJornada', services.updateJornada);
 router.post('/deleteJornada', services.deleteJornada);
 
-
-
 module.exports = router;

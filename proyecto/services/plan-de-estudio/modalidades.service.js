@@ -2,6 +2,7 @@ var invoker = require('../../../base/invokers/invoker.invoker');
 var reply = require('../../../base/utils/reply');
 var validador = require('../../../base/utils/validador');
 const reportInvoker = require("../../../base/invokers/report.invoker");
+const { getNextCodigo } = require('../../utils/gpUtils')
 
 let listModalidades = [];
 const haveLogica = false;
@@ -116,9 +117,99 @@ let insertModalidad = async (req, res) =>{
     }
 }
 
+let updateModalidad = async (req, res) => {
+    try{
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "number", "Cod_modalidad", true);
+        msg += validador.validarParametro(args, "cadena", "Descripcion_modalidad", true);
+
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+        
+        let params = {
+            [campos_mod.Cod_modalidad]: args.Cod_modalidad,
+            [campos_mod.Descripcion_modalidad]: args.Descripcion_modalidad,
+        };
+
+        let updateModalidad;
+
+        if (haveLogica) {
+            updateModalidad = await invoker (
+                global.config.serv_basePostgrado,
+                `${mod.m}/${mod.update}`,
+                params
+            );
+        }else{
+            let index_mod = listModalidades.findIndex( item => item.Cod_modalidad === params[campos_mod.Cod_modalidad])
+            if (index_mod !== -1 ) {
+                updateModalidad = listModalidades[index_mod] = {...listModalidades[index_mod], ...params}
+            }else{
+                updateModalidad = null;
+            }
+        }
+
+        let response = { dataWasUpdated: updateModalidad, dataUpdated: args.Descripcion_modalidad }
+        res.json(reply.ok(response));
+
+    }catch(e){
+        res.json(reply.fatal(e));
+    }
+}
+
+let deleteModalidad = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        
+        let msg = validador.validarParametro(args, "lista", "modalidadToDelete", true);
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+
+        let modalidadToDelete = args.modalidadToDelete;
+
+        for (let i = 0; i < modalidadToDelete.length; i++) {
+            const e = modalidadToDelete[i];
+
+            let params = {
+                [campos_mod.Cod_modalidad]: parseInt(e.Cod_modalidad)
+            };
+
+            let deleteModalidad;
+
+            if (haveLogica) {
+                deleteModalidad = await invoker(
+                    global.config.serv_basePostgrado,
+                    `${mod.m}/${mod.delete}`,
+                    params
+                );
+            } else {
+                listModalidades = listModalidades.filter(mod => 
+                    mod[campos_mod.Cod_modalidad] != parseInt(e.Cod_modalidad)
+                );
+                deleteModalidad = true;
+            }
+
+            if (!deleteModalidad) {
+                res.json(reply.error(`La modalidad no pudo ser eliminada.`));
+                return;
+            }
+        }
+
+        let response = { dataWasDeleted: true, dataDeleted: modalidadToDelete };
+        res.json(reply.ok(response));
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+};
+
 module.exports = {
 
     //data en bruto
     getModalidades,
-    insertModalidad
+    insertModalidad,
+    updateModalidad,
+    deleteModalidad
 }
