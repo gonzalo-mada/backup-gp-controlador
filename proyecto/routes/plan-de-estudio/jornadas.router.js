@@ -10,6 +10,7 @@ var router = express.Router();
 router.post('/getJornadas', services.getJornadas);
 router.post('/insertJornada', services.insertJornada);
 router.post('/updateJornada', services.updateJornada);
+router.post('/deleteJornada', services.deleteJornada);
 
 
 

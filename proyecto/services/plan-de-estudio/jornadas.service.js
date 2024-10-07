@@ -153,11 +153,58 @@ let updateJornada = async (req, res) => {
     }
 }
 
+let deleteJornada = async (req, res) => {
+    try {
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        
+        let msg = validador.validarParametro(args, "lista", "jornadaToDelete", true);
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+
+        let jornadaToDelete = args.jornadaToDelete;
+
+        for (let i = 0; i < jornadaToDelete.length; i++) {
+            const e = jornadaToDelete[i];
+
+            let params = {
+                [campos_jor.Cod_jornada]: parseInt(e.Cod_jornada)
+            };
+
+            let deleteJornada;
+
+            if (haveLogica) {
+                deleteJornada = await invoker(
+                    global.config.serv_basePostgrado,
+                    `${jor.j}/${jor.delete}`,
+                    params
+                );
+            } else {
+                listJornadas = listJornadas.filter(jor => 
+                    jor[campos_jor.Cod_jornada] != parseInt(e.Cod_jornada)
+                );
+                deleteJornada = true;
+            }
+
+            if (!deleteJornada) {
+                res.json(reply.error(`La jornada no pudo ser eliminada.`));
+                return;
+            }
+        }
+
+        let response = { dataWasDeleted: true, dataDeleted: jornadaToDelete };
+        res.json(reply.ok(response));
+    } catch (e) {
+        res.json(reply.fatal(e));
+    }
+};
 
 module.exports = {
 
     //data en bruto
     getJornadas,
     insertJornada,
-    updateJornada
+    updateJornada,
+    deleteJornada
 }
