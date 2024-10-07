@@ -8,7 +8,9 @@ var router = express.Router();
 
 //data en bruto jornadas
 router.post('/getJornadas', services.getJornadas);
-
 router.post('/insertJornada', services.insertJornada);
+router.post('/updateJornada', services.updateJornada);
+
+
 
 module.exports = router;

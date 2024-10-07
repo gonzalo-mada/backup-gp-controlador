@@ -112,10 +112,52 @@ let insertJornada = async (req, res) =>{
     }
 }
 
+let updateJornada = async (req, res) => {
+    try{
+        let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
+        let msg = validador.validarParametro(args, "number", "Cod_jornada", true);
+        msg += validador.validarParametro(args, "cadena", "Descripcion_jornada", true);
+
+        if (msg != "") {
+            res.json(reply.error(msg));
+            return;
+        }
+        
+        let params = {
+            [campos_jor.Cod_jornada]: args.Cod_jornada,
+            [campos_jor.Descripcion_jornada]: args.Descripcion_jornada,
+        };
+
+        let updateJornada;
+
+        if (haveLogica) {
+            updateJornada = await invoker (
+                global.config.serv_basePostgrado,
+                `${jor.j}/${jor.update}`,
+                params
+            );
+        }else{
+            let index_jor = listJornadas.findIndex( item => item.Cod_jornada === params[campos_jor.Cod_jornada])
+            if (index_jor !== -1 ) {
+                updateJornada = listJornadas[index_jor] = {...listJornadas[index_jor], ...params}
+            }else{
+                updateJornada = null;
+            }
+        }
+
+        let response = { dataWasUpdated: updateJornada, dataUpdated: args.Descripcion_jornada }
+        res.json(reply.ok(response));
+
+    }catch(e){
+        res.json(reply.fatal(e));
+    }
+}
+
 
 module.exports = {
 
     //data en bruto
     getJornadas,
-    insertJornada
+    insertJornada,
+    updateJornada
 }

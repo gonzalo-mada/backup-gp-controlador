@@ -200,7 +200,7 @@ let updateSuspension = async (req, res) => {
             if (index_susp !== -1 ) {
                 updateSuspension = listSuspension[index_susp] = {...listSuspension[index_susp], ...params}
             }else{
-                updateSuspension = null ;
+                updateSuspension = null;
             }
         }
 
