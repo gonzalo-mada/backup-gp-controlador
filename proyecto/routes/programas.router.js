@@ -12,8 +12,8 @@ router.post('/getProgramas', services.getProgramas);
 router.post('/getInstituciones', services.getInstituciones);
 router.post('/getInstitucionesSelected', services.getInstitucionesSelected);
 router.post('/getGradConjunta', services.getGradConjunta);
-router.post('/getGradConjunta_Prog', services.getGradConjunta_Prog);
 router.post('/insertPrograma', services.insertPrograma);
 router.post('/getDocumentosWithBinary', services.getDocumentosWithBinary);
+router.post('/getLogPrograma', services.getLogPrograma);
 
 module.exports = router;

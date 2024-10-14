@@ -31,7 +31,7 @@ module.exports = {
         { name: 'proyectoBase_medio' },
         { name: "mongoDocumentos" },
         { name: "campus" },
-        { name: "basePostgrado" },
+        // { name: "basePostgrado" },
         { name: "wsfincon" },
         { name: "conveniosFormulario" }
     ],
