@@ -136,6 +136,13 @@ let updateModalidad = async (req, res) => {
 
         let updateModalidad;
 
+        let modExist = listModalidades.some(mod => (String(mod.Descripcion_modalidad).toLowerCase() === String(args.Descripcion_modalidad).toLowerCase()) );
+
+        if (modExist) {
+            res.json(reply.error(`La modalidad ${args.Descripcion_modalidad} ya existe.`));
+            return;
+        }
+
         if (haveLogica) {
             updateModalidad = await invoker (
                 global.config.serv_basePostgrado,
