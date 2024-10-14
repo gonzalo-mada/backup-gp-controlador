@@ -86,6 +86,7 @@ let getEstadosAcreditacion = async (req, res) => {
         let listMerge = listEstadosAcred.map( ea => {
             let tiempos = listTiemposAcred.find( tiempos => tiempos.codigo === ea.codigoAcred)
             return {
+                "Sigla": ea.sigla,
                 "Cod_acreditacion" : ea.codigoAcred,
                 "Acreditado" : ea[campos_ea.Acreditado],
                 "Certificado" : ea[campos_ea.Certificado],
