@@ -1,11 +1,11 @@
 var invoker = require('../../../base/invokers/invoker.invoker');
 var reply = require('../../../base/utils/reply');
 var validador = require('../../../base/utils/validador');
-const { getNextCodigo } = require('../../utils/gpUtils')
+const { getNextCodigoJornada } = require('../../utils/jornadasUtils')
 
 
 let listJornadas = [];
-const haveLogica = false;
+const haveLogica = true;
 
 const jor = {
     "j" : "jornada",
@@ -66,10 +66,10 @@ let insertJornada = async (req, res) =>{
                 null
             );
         }
-        let codigo_jor = getNextCodigo(listJornadas,'Cod_jornada');
+        let codigo_jor = getNextCodigoJornada(listJornadas,'Cod_jornada');
 
         let params = {
-            [campos_jor.Cod_jornada]: parseInt(codigo_jor),
+            [campos_jor.Cod_jornada]: codigo_jor,
             [campos_jor.Descripcion_jornada]: args.Descripcion_jornada,
         };
 
@@ -96,10 +96,10 @@ let insertJornada = async (req, res) =>{
                     await invoker(
                         global.config.serv_basePostgrado,
                         `${jor.j}/${jor.delete}`,
-                        { [campos_jor.Cod_jornada] : parseInt(codigo_jor) }
+                        { [campos_jor.Cod_jornada] : codigo_jor }
                     );
                 }else{
-                    listJornadas = listJornadas.filter( jor => jor[campos_jor.Cod_jornada] != parseInt(codigo_jor))
+                    listJornadas = listJornadas.filter( jor => jor[campos_jor.Cod_jornada] != codigo_jor)
                 }
                 throw error;
             }
@@ -169,7 +169,7 @@ let deleteJornada = async (req, res) => {
             const e = jornadaToDelete[i];
 
             let params = {
-                [campos_jor.Cod_jornada]: parseInt(e.Cod_jornada)
+                [campos_jor.Cod_jornada]: e.Cod_jornada
             };
 
             let deleteJornada;
@@ -182,7 +182,7 @@ let deleteJornada = async (req, res) => {
                 );
             } else {
                 listJornadas = listJornadas.filter(jor => 
-                    jor[campos_jor.Cod_jornada] != parseInt(e.Cod_jornada)
+                    jor[campos_jor.Cod_jornada] != e.Cod_jornada
                 );
                 deleteJornada = true;
             }

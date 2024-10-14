@@ -5,7 +5,7 @@ const reportInvoker = require("../../../base/invokers/report.invoker");
 const { getNextCodigo } = require('../../utils/gpUtils')
 
 let listModalidades = [];
-const haveLogica = false;
+const haveLogica = true;
 
 const mod = {
     "m" : "modalidad",
@@ -91,24 +91,18 @@ let insertModalidad = async (req, res) =>{
         }
 
         if (!insertModalidad) {
-            res.json(reply.error(`La modalidad no pudo ser creada.`));
-            return;
-        }else{
-            try {
-                //No posee documentos REXE
-            } catch (error) {
-                if (haveLogica) {
-                    await invoker(
-                        global.config.serv_basePostgrado,
-                        `${mod.m}/${mod.delete}`,
-                        { [campos_mod.Cod_modalidad] : parseInt(codigo_mod) }
-                    );
-                }else{
-                    listModalidades = listModalidades.filter( mod => mod[campos_mod.Cod_modalidad] != parseInt(campos_mod))
-                }
-                throw error;
+            if (haveLogica) {
+                await invoker(
+                    global.config.serv_basePostgrado,
+                    `${mod.m}/${mod.delete}`,
+                    { [campos_mod.Cod_modalidad] : parseInt(codigo_mod) }
+                );
+            }else{
+                listModalidades = listModalidades.filter( mod => mod[campos_mod.Cod_modalidad] != parseInt(campos_mod))
             }
+            return res.json(reply.error(`La modalidad no pudo ser creada.`));
         }
+        
         let response = { dataWasInserted: insertModalidad , dataInserted: args.Descripcion_modalidad}
         res.json(reply.ok(response));
 
