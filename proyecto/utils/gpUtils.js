@@ -1,7 +1,11 @@
 const uuid = require("uuid");
 var invoker = require('../../base/invokers/invoker.invoker');
+var decryptToken = require("../../base/utils/decryptToken");
 
 const getNextCodigo = (data, atributo) => {
+    // console.log("data getNextCodigo",data);
+    // console.log("atributo getNextCodigo",atributo);
+    
     try {
         if (!data || data.length === 0) {
             //si no hay datos, se devuelve 1
@@ -156,4 +160,70 @@ const formatDateGp = (dateString) => {
     return `${day}-${month}-${year}`;
 }
 
-module.exports = { getNextCodigo, insertDocs, updateDocs, formatDateGp };
+const formatDateTimeGp = (dateString) => {
+    // console.log("dateString",dateString);
+       
+    const date = new Date(dateString);
+
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = String(date.getUTCFullYear());
+    
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+    
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+}
+
+const insertLogPrograma = async (req, Cod_Programa, descripcion, tipo_movimiento) => {
+    try {
+        const token = req.headers.authorization;
+        const dataDecrypt = await decryptToken(token);
+
+        let fechaSantiago = new Date().toLocaleString('sv-SE', {
+            timeZone: 'America/Santiago',
+            hour12: false,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        }).replace(" ", "T"); // Formato ISO 8601
+
+        let params = {
+            "Cod_Programa" : Cod_Programa,
+            "descripcion" : descripcion,
+            "fecha" : fechaSantiago,
+            "tipo_movimiento" : tipo_movimiento,
+            "usuario" : dataDecrypt.rut,
+            "nombre_usuario" : dataDecrypt.nombreCompleto,
+            "correo_usuario" : dataDecrypt.correouv || dataDecrypt.mail,
+        }
+
+        let logPrograma = await invoker(
+            global.config.serv_basePostgrado,
+            'programa/insertLogPrograma',
+            params
+        );
+
+        if (logPrograma) {
+            return true
+        }else{
+            return false
+        }
+
+    } catch (error) {
+        throw error
+    }
+}
+
+module.exports = { 
+    getNextCodigo, 
+    insertDocs, 
+    updateDocs, 
+    formatDateGp,
+    formatDateTimeGp,
+    insertLogPrograma 
+};
