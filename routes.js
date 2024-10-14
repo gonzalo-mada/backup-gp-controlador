@@ -17,5 +17,7 @@ module.exports = (app, rootPath) => {
     app.use(`/${rootPath}/programas`, require("./proyecto/routes/programas.router"));
     app.use(`/${rootPath}/estado_maestro`, require("./proyecto/routes/estado-maestro.router"));
     app.use(`/${rootPath}/suspensiones`, require("./proyecto/routes/suspensiones.router"));
+    app.use(`/${rootPath}/jornadas`, require("./proyecto/routes/plan-de-estudio/jornadas.router"));
+    app.use(`/${rootPath}/modalidades`, require("./proyecto/routes/plan-de-estudio/modalidades.router"));
 
 };
