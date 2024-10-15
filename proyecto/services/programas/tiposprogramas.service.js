@@ -1,11 +1,11 @@
 'use strict';
-var invoker = require('../../base/invokers/invoker.invoker');
-var reply = require('../../base/utils/reply');
-var validador = require('../../base/utils/validador');
+var invoker = require('../../../base/invokers/invoker.invoker');
+var reply = require('../../../base/utils/reply');
+var validador = require('../../../base/utils/validador');
 const uuid = require("uuid");
-const reportInvoker = require("../../base/invokers/report.invoker");
-const { categorias_tp } = require("../services/categorias-tp.service.js")
-const { getRandomColor, getTextColor, badgeColorMapping} = require("../utils/colors.js")
+const reportInvoker = require("../../../base/invokers/report.invoker");
+const { categorias_tp } = require("./categorias-tp.service.js")
+const { getRandomColor, getTextColor, badgeColorMapping} = require("../../utils/colors.js")
 
 var tipos_programas = [
     {

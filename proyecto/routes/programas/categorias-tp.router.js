@@ -2,7 +2,7 @@
 
 var express = require('express');
 
-var services = require('../services/categorias-tp.service');
+var services = require('../../services/programas/categorias-tp.service');
 
 var router = express.Router();
 

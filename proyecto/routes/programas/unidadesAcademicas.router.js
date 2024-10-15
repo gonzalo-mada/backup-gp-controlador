@@ -2,7 +2,7 @@
 
 var express = require('express');
 
-var services = require('../services/unidadesAcademicas.service');
+var services = require('../../services/programas/unidadesAcademicas.service');
 
 var router = express.Router();
 

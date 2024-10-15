@@ -1,10 +1,10 @@
 'use strict';
-var invoker = require('../../base/invokers/invoker.invoker');
-var reply = require('../../base/utils/reply');
-var validador = require('../../base/utils/validador');
-var decryptToken = require("../../base/utils/decryptToken");
-const reportInvoker = require("../../base/invokers/report.invoker");
-const { getNextCodigo, insertDocs, updateDocs, formatDateGp, insertLogPrograma, formatDateTimeGp } = require('../utils/gpUtils')
+var invoker = require('../../../base/invokers/invoker.invoker');
+var reply = require('../../../base/utils/reply');
+var validador = require('../../../base/utils/validador');
+var decryptToken = require("../../../base/utils/decryptToken");
+const reportInvoker = require("../../../base/invokers/report.invoker");
+const { getNextCodigo, insertDocs, updateDocs, formatDateGp, insertLogPrograma, formatDateTimeGp } = require('../../utils/gpUtils')
 
 let listProgramas = [];
 let listProgramasNotMerged = [];
@@ -1281,100 +1281,33 @@ let getLogPrograma = async (req, res) => {
     }
 }
 
-// let insertLogPrograma = async (req, res) => {
-//     try {
-//         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-//         let msg = validador.validarParametro(args, "numero", "Cod_Programa", true);
-//         msg += validador.validarParametro(args, "cadena", "descripcion", true);
-//         msg += validador.validarParametro(args, "cadena", "fecha", true);
-//         msg += validador.validarParametro(args, "cadena", "tipo_movimiento", true);
-//         msg += validador.validarParametro(args, "cadena", "usuario", true);
-        
-//         if (msg != "") {
-//             res.json(reply.error(msg));
-//             return;
-//         }
-
-//         let params = {
-//             [campos_logPrograma.Cod_Programa] : args.Cod_Programa,
-//             [campos_logPrograma.descripcion] : args.descripcion,
-//             [campos_logPrograma.fecha] : args.fecha,
-//             [campos_logPrograma.tipo_movimiento] : args.tipo_movimiento,
-//             [campos_logPrograma.usuario] : args.usuario
-//         }
-
-//         let logPrograma = await invoker(
-//             global.config.serv_basePostgrado,
-//             `${log.s}/${log.insert}`,
-//             params
-//         );
-
-//         res.json(reply.ok(logPrograma));
-//     } catch (e) {
-//         console.log("error insertLogPrograma",e);
-//         res.json(reply.fatal(e)); 
-//     }
-// }
-
-
-
-let insertCampusTest = async (req, res) => {
+let getArchiveDoc = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        let msg = validador.validarParametro(args, "cadena", "Descripcion_campus", true);
-        msg += validador.validarParametro(args, "boolean", "Estado_campus", true);
-
+        let msg = validador.validarParametro(args, "cadena", "id", true);
+        msg += validador.validarParametro(args, "cadena","from", true);
+ 
         if (msg != "") {
             res.json(reply.error(msg));
             return;
         }
-
-        let insertLog = await insertLogPrograma(req, 1340,'TEST_CREATE_CAMPUS','C')
-        console.log("insertLog",insertLog);
-        
-        return
-
-        //INSERTAR CAMPUS
-        let campus = await invoker(
-            global.config.serv_campus,
-            'postgrado/getCampus',
-            null
+ 
+        let archivo = await reportInvoker(
+            global.config.serv_mongoDocumentos,
+            "documentos/obtenerArchivoDocumento",
+            {
+                database: "gestionProgramas",
+                coleccion: args.from,
+                id: args.id,
+            }
         );
 
-        let campusExists = campus.some(c => (String(c.descripcion).toLowerCase() === String(args.Descripcion_campus).toLowerCase()) );
-
-        if (campusExists) {
-            res.json(reply.error(`El campus ${args.Descripcion_campus} ya existe.`));
-            return;
-        }
-        
-        let ultimoObjeto = campus[campus.length - 1];
-        let ultimoCodigo = ultimoObjeto.codigo;
-        let codigoCampus = ultimoCodigo + 1; 
-
-        let params = {
-            codigoCampus: parseInt(codigoCampus),
-            descripcionCampus: args.Descripcion_campus,
-            estadoCampus: args.Estado_campus === true ? 1 : 0
-        }
-
-        let insertCampus = await invoker(
-            global.config.serv_campus,
-            'postgrado/insertCampus',
-            params
-        );
-
-        if (insertCampus) {
-            let insertLog = await insertLogPrograma(req, 24,'TEST_CREATE_CAMPUS',new Date(),'C')
-        }
-        
-        res.json(reply.ok(insertCampus));
-
+        res.send(archivo);
     } catch (e) {
-        console.log("insertCampusTest",e);
         res.json(reply.fatal(e));
     }
 }
+
 module.exports = {
     getDirector,
     getPrograma,
@@ -1385,5 +1318,5 @@ module.exports = {
     insertPrograma,
     getDocumentosWithBinary,
     getLogPrograma,
-    insertCampusTest
+    getArchiveDoc
 }
