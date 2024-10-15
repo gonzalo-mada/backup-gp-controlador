@@ -1,9 +1,9 @@
 'use strict';
-var invoker = require('../../base/invokers/invoker.invoker');
-var reply = require('../../base/utils/reply');
-var validador = require('../../base/utils/validador');
+var invoker = require('../../../base/invokers/invoker.invoker');
+var reply = require('../../../base/utils/reply');
+var validador = require('../../../base/utils/validador');
 const uuid = require("uuid");
-const reportInvoker = require("../../base/invokers/report.invoker");
+const reportInvoker = require("../../../base/invokers/report.invoker");
 
 var categorias_tp = [
     {

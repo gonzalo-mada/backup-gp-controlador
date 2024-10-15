@@ -2,7 +2,7 @@
 
 var express = require('express');
 
-var services = require('../services/tiposprogramas.service');
+var services = require('../../services/programas/tiposprogramas.service');
 
 var router = express.Router();
 

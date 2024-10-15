@@ -1,9 +1,9 @@
 'use strict';
-var invoker = require('../../base/invokers/invoker.invoker');
-var reply = require('../../base/utils/reply');
-var validador = require('../../base/utils/validador');
-const reportInvoker = require("../../base/invokers/report.invoker");
-const { getNextCodigo, insertDocs, updateDocs } = require('../utils/gpUtils')
+var invoker = require('../../../base/invokers/invoker.invoker');
+var reply = require('../../../base/utils/reply');
+var validador = require('../../../base/utils/validador');
+const reportInvoker = require("../../../base/invokers/report.invoker");
+const { getNextCodigo, insertDocs, updateDocs } = require('../../utils/gpUtils')
 
 let getReglamentos = async (req, res) => {
     try {

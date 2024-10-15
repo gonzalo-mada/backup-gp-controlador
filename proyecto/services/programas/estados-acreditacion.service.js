@@ -1,11 +1,11 @@
 'use strict';
-var invoker = require('../../base/invokers/invoker.invoker');
-var reply = require('../../base/utils/reply');
-var validador = require('../../base/utils/validador');
+var invoker = require('../../../base/invokers/invoker.invoker');
+var reply = require('../../../base/utils/reply');
+var validador = require('../../../base/utils/validador');
 const uuid = require("uuid");
-const reportInvoker = require("../../base/invokers/report.invoker");
-const { formatDateToSQL, minDate, notAgencia, normalizeSwitch, } = require('../utils/estadosAcredUtils')
-const { getNextCodigo, insertDocs, updateDocs, formatDateGp } = require('../utils/gpUtils')
+const reportInvoker = require("../../../base/invokers/report.invoker");
+const { formatDateToSQL, minDate, notAgencia, normalizeSwitch, } = require('../../utils/estadosAcredUtils')
+const { getNextCodigo, insertDocs, updateDocs, formatDateGp } = require('../../utils/gpUtils')
 
 let listEstadosAcred = [];
 let listTiemposAcred = [];

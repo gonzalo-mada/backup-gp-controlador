@@ -2,7 +2,7 @@
 
 var express = require('express');
 
-var services = require('../services/estados-acreditacion.service');
+var services = require('../../services/programas/estados-acreditacion.service');
 
 var router = express.Router();
 

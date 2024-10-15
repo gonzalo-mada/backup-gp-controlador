@@ -2,7 +2,7 @@
 
 var express = require('express');
 
-var services = require('../services/estado-maestro.service');
+var services = require('../../services/programas/estado-maestro.service');
 
 var router = express.Router();
 

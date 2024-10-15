@@ -2,7 +2,7 @@
 
 var express = require('express');
 
-var services = require('../services/campus.service');
+var services = require('../../services/programas/campus.service');
 
 var router = express.Router();
 

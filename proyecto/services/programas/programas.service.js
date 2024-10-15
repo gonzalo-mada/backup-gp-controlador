@@ -1,10 +1,10 @@
 'use strict';
-var invoker = require('../../base/invokers/invoker.invoker');
-var reply = require('../../base/utils/reply');
-var validador = require('../../base/utils/validador');
-var decryptToken = require("../../base/utils/decryptToken");
-const reportInvoker = require("../../base/invokers/report.invoker");
-const { getNextCodigo, insertDocs, updateDocs, formatDateGp, insertLogPrograma, formatDateTimeGp } = require('../utils/gpUtils')
+var invoker = require('../../../base/invokers/invoker.invoker');
+var reply = require('../../../base/utils/reply');
+var validador = require('../../../base/utils/validador');
+var decryptToken = require("../../../base/utils/decryptToken");
+const reportInvoker = require("../../../base/invokers/report.invoker");
+const { getNextCodigo, insertDocs, updateDocs, formatDateGp, insertLogPrograma, formatDateTimeGp } = require('../../utils/gpUtils')
 
 let listProgramas = [];
 let listProgramasNotMerged = [];
