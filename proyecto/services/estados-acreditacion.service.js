@@ -56,7 +56,8 @@ const campos_ea = {
     "Nombre_ag_acredit" : "nombreAgAcred",
     "Nombre_ag_certif" : "nombreAgCert",
     "Fecha_informe" : "fechaInforme",
-    "Cod_tiempoacredit" : "codigoTiempoAcred"
+    "Cod_tiempoacredit" : "codigoTiempoAcred",
+    "sigla": "sigla"
 }
 
 const campos_ta = {
@@ -176,18 +177,22 @@ let insertEstadoAcreditacion = async (req, res) => {
                 [campos_ta.Cantidad_anios]: args.tiempo.Cantidad_anios
                 };
                 params_ea[campos_ea.Nombre_ag_acredit] = args.Nombre_ag_acredit;
+                params_ea[campos_ea.sigla] = `ACREDx${args.tiempo.Cantidad_anios}AÑOS(HASTA:${args.tiempo.Fecha_termino})`;
                 break;
             default: // 'NO'
                 params_ea[campos_ea.Nombre_ag_acredit] = notAgencia;
+                params_ea[campos_ea.sigla] = switchCertificado === 'SI' ? `CERTIFx${args.Nombre_ag_certif})` : `N/A`;
                 break;
         }
           
         switch (switchCertificado) {
             case 'SI':
                 params_ea[campos_ea.Nombre_ag_certif] = args.Nombre_ag_certif;
+                params_ea[campos_ea.sigla] = `CERTIFx${args.Nombre_ag_certif})`;
                 break;
             default: // 'NO'
                 params_ea[campos_ea.Nombre_ag_certif] = notAgencia;
+                params_ea[campos_ea.sigla] = switchAcreditado === 'SI' ? `ACREDx${args.tiempo.Cantidad_anios}AÑOS(HASTA:${args.tiempo.Fecha_termino})` : `N/A`;
                 break;
         }
 
@@ -340,16 +345,12 @@ let updateEstadoAcreditacion = async (req, res) => {
 
         switch (switchAcreditado) {
             case 'SI':
-                params_ta = {
-                ...params_ta,
-                [campos_ta.Fecha_inicio]: formatDateToSQL(args.tiempo.Fecha_inicio),
-                [campos_ta.Fecha_termino]: formatDateToSQL(args.tiempo.Fecha_termino),
-                [campos_ta.Cantidad_anios]: args.tiempo.Cantidad_anios
-                };
                 params_ea[campos_ea.Nombre_ag_acredit] = args.Nombre_ag_acredit;
+                params_ea[campos_ea.sigla] = `ACREDx${args.tiempo.Cantidad_anios}AÑOS(HASTA:${args.tiempo.Fecha_termino})`;
                 break;
             default: // 'NO'
                 params_ea[campos_ea.Nombre_ag_acredit] = notAgencia;
+                params_ea[campos_ea.sigla] = switchCertificado === 'SI' ? `CERTIFx${args.Nombre_ag_certif})` : `N/A`;
                 break;
         }
           
@@ -362,9 +363,11 @@ let updateEstadoAcreditacion = async (req, res) => {
                     [campos_ta.Cantidad_anios]: args.tiempo.Cantidad_anios
                 };
                 params_ea[campos_ea.Nombre_ag_certif] = args.Nombre_ag_certif;
+                params_ea[campos_ea.sigla] = `CERTIFx${args.Nombre_ag_certif})`;
                 break;
             default: // 'NO'
                 params_ea[campos_ea.Nombre_ag_certif] = notAgencia;
+                params_ea[campos_ea.sigla] = switchAcreditado === 'SI' ? `ACREDx${args.tiempo.Cantidad_anios}AÑOS(HASTA:${args.tiempo.Fecha_termino})` : `N/A`;
                 break;
         }
 

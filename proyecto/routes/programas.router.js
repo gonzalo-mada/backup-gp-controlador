@@ -15,5 +15,6 @@ router.post('/getGradConjunta', services.getGradConjunta);
 router.post('/insertPrograma', services.insertPrograma);
 router.post('/getDocumentosWithBinary', services.getDocumentosWithBinary);
 router.post('/getLogPrograma', services.getLogPrograma);
+router.post('/getArchiveDoc', services.getArchiveDoc);
 
 module.exports = router;
