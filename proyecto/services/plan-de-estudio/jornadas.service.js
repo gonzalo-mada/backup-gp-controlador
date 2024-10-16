@@ -59,6 +59,7 @@ let insertJornada = async (req, res) =>{
             res.json(reply.error(msg));
             return;
         };
+
         if (haveLogica) {
             listJornadas = await invoker(
                 global.config.serv_basePostgrado,
@@ -67,6 +68,13 @@ let insertJornada = async (req, res) =>{
             );
         }
         let codigo_jor = getNextCodigo(listJornadas,'Cod_jornada');
+
+        let jorExist = listJornadas.some(jor => (String(jor.Descripcion_jornada).toLowerCase() === String(args.Descripcion_jornada).toLowerCase()) );
+
+        if (jorExist) {
+            res.json(reply.error(`La jornada ${args.Descripcion_jornada} ya existe.`));
+            return;
+        }
 
         let params = {
             [campos_jor.Cod_jornada]: parseInt(codigo_jor),
@@ -131,6 +139,13 @@ let updateJornada = async (req, res) => {
         };
 
         let updateJornada;
+
+        let jorExist = listJornadas.some(jor => (String(jor.Descripcion_jornada).toLowerCase() === String(args.Descripcion_jornada).toLowerCase()) );
+
+        if (jorExist) {
+            res.json(reply.error(`La jornada ${args.Descripcion_jornada} ya existe.`));
+            return;
+        }
 
         if (haveLogica) {
             updateJornada = await invoker (
