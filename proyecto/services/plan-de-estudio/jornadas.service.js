@@ -1,7 +1,7 @@
 var invoker = require('../../../base/invokers/invoker.invoker');
 var reply = require('../../../base/utils/reply');
 var validador = require('../../../base/utils/validador');
-const { getNextCodigoJornada } = require('../../utils/jornadasUtils')
+const { getNextCodigo } = require('../../utils/gpUtils')
 
 
 let listJornadas = [];
@@ -66,10 +66,10 @@ let insertJornada = async (req, res) =>{
                 null
             );
         }
-        let codigo_jor = getNextCodigoJornada(listJornadas,'Cod_jornada');
+        let codigo_jor = getNextCodigo(listJornadas,'Cod_jornada');
 
         let params = {
-            [campos_jor.Cod_jornada]: codigo_jor,
+            [campos_jor.Cod_jornada]: parseInt(codigo_jor),
             [campos_jor.Descripcion_jornada]: args.Descripcion_jornada,
         };
 
@@ -108,6 +108,8 @@ let insertJornada = async (req, res) =>{
         res.json(reply.ok(response));
 
     }catch(error){
+        console.log("e",error);
+        
         return res.json(reply.fatal(error));
     }
 }
@@ -115,7 +117,7 @@ let insertJornada = async (req, res) =>{
 let updateJornada = async (req, res) => {
     try{
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        let msg = validador.validarParametro(args, "number", "Cod_jornada", true);
+        let msg = validador.validarParametro(args, "numero", "Cod_jornada", true);
         msg += validador.validarParametro(args, "cadena", "Descripcion_jornada", true);
 
         if (msg != "") {
@@ -169,7 +171,7 @@ let deleteJornada = async (req, res) => {
             const e = jornadaToDelete[i];
 
             let params = {
-                [campos_jor.Cod_jornada]: e.Cod_jornada
+                [campos_jor.Cod_jornada]: parseInt(e.Cod_jornada)
             };
 
             let deleteJornada;
