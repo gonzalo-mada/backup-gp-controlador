@@ -124,10 +124,6 @@ const updateDocs = async ({arrayDocs , coleccion, extrasKeyCode, extrasValueCode
         for (let i = 0; i < arrayDocs.length; i++) {
             const doc = arrayDocs[i];
             
-            if (i === 1) {
-                const errorObject = { message: `Error intencional` }
-                throw errorObject;
-            }
             if (!doc.id) {
                 //es un nuevo archivo
                 let docInsertedFromUpdate = await insertDocs({
@@ -141,8 +137,7 @@ const updateDocs = async ({arrayDocs , coleccion, extrasKeyCode, extrasValueCode
                 let docUpdF = { id: docInsertedFromUpdate.docsInserted[0].id }
                 arrayDocsInsertedFromUpdate.push(docUpdF)
             }else{
-                let params;
-                params = {
+                let params = {
                     database: "gestionProgramas",
                     coleccion: coleccion,
                     id: doc.id,
