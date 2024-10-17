@@ -112,8 +112,7 @@ let getEstadosAcreditacion = async (req, res) => {
 let insertEstadoAcreditacion = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        console.log("args insert",args);
-        
+        // console.log("args insert",args);
         let msg = validador.validarParametro(args, "date", "Fecha_informe", true);
         msg += validador.validarParametro(args, "cadena", "Acreditado", false);
         msg += validador.validarParametro(args, "cadena", "Certificado", false);
@@ -207,11 +206,27 @@ let insertEstadoAcreditacion = async (req, res) => {
                 params_ta
             );
 
-            insertEstadosAcred = await invoker (
-                global.config.serv_basePostgrado,
-                `${ea.s}/${ea.insert}`,
-                params_ea
-            ); 
+            try {
+                insertEstadosAcred = await invoker (
+                    global.config.serv_basePostgrado,
+                    `${ea.s}/${ea.insert}`,
+                    params_ea
+                );
+            } catch (error) {
+                //HUBO UN ERROR AL INSERTAR EA A BD, SE ELIMINA EL TIEMPOACRED RECIEN CREADO.
+                if (haveLogica) {
+                    await invoker(
+                        global.config.serv_basePostgrado,
+                        `${ta.s}/${ta.delete}`,
+                        { [campos_ta.Cod_tiempoacredit] : parseInt(codigo_ta) }
+                    );
+                }else{
+                    listTiemposAcred = listTiemposAcred.filter( tA => tA[campos_ta.Cod_tiempoacredit] != parseInt(codigo_ta))
+                }
+                throw error
+            }
+            
+             
         }else{            
             insertTiemposAcred = listTiemposAcred.push(params_ta)
             insertEstadosAcred = listEstadosAcred.push(params_ea)
@@ -237,13 +252,13 @@ let insertEstadoAcreditacion = async (req, res) => {
                 if (haveLogica) {
                     await invoker(
                         global.config.serv_basePostgrado,
-                        `${ea.s}/${ea.delete}`,
-                        { [campos_ea.Cod_acreditacion] : parseInt(codigo_ea) }
+                        `${ta.s}/${ta.delete}`,
+                        { [campos_ta.Cod_tiempoacredit] : parseInt(codigo_ta) }
                     );
                     await invoker(
                         global.config.serv_basePostgrado,
-                        `${ta.s}/${ta.delete}`,
-                        { [campos_ta.Cod_tiempoacredit] : parseInt(codigo_ta) }
+                        `${ea.s}/${ea.delete}`,
+                        { [campos_ea.Cod_acreditacion] : parseInt(codigo_ea) }
                     );
                     // res.json(reply.error(error));
                 }else{

@@ -3,7 +3,7 @@ var invoker = require('../../../base/invokers/invoker.invoker');
 var reply = require('../../../base/utils/reply');
 var validador = require('../../../base/utils/validador');
 const reportInvoker = require("../../../base/invokers/report.invoker");
-const { insertDocs, updateDocs } = require('../../utils/gpUtils');
+const { insertDocs, updateDocs, deleteDocs } = require('../../utils/gpUtils');
 
 let getDocumentosWithBinary = async (req, res) => {
 
@@ -116,68 +116,68 @@ let logica_insertCampus = async (req, res) => {
         msg += validador.validarParametro(args, "boolean", "Estado_campus", true);
 
         if (msg != "") {
-            res.json(reply.error(msg));
-            return;
+            throw msg;
         }
 
-        //INSERTAR CAMPUS
-        let campus = await invoker(
-            global.config.serv_campus,
-            'postgrado/getCampus',
-            null
-        );
+        //OBTENGO CAMPUS EXISTENTES
+        // let campus = await invoker(
+        //     global.config.serv_campus,
+        //     'postgrado/getCampus',
+        //     null
+        // );
 
-        let campusExists = campus.some(c => (String(c.descripcion).toLowerCase() === String(args.Descripcion_campus).toLowerCase()) );
+        // let campusExists = campus.some(c => (String(c.descripcion).toLowerCase() === String(args.Descripcion_campus).toLowerCase()) );
 
-        if (campusExists) {
-            res.json(reply.error(`El campus ${args.Descripcion_campus} ya existe.`));
-            return;
-        }
+        // if (campusExists) {
+        //     throw `El campus ${args.Descripcion_campus} ya existe.`;
+        // }
         
-        let ultimoObjeto = campus[campus.length - 1];
-        let ultimoCodigo = ultimoObjeto.codigo;
-        let codigoCampus = ultimoCodigo + 1; 
+        // let ultimoObjeto = campus[campus.length - 1];
+        // let ultimoCodigo = ultimoObjeto.codigo;
+        // let codigoCampus = ultimoCodigo + 1; 
 
         let params = {
-            codigoCampus: parseInt(codigoCampus),
+            // codigoCampus: parseInt(codigoCampus),
             descripcionCampus: args.Descripcion_campus,
             estadoCampus: args.Estado_campus === true ? 1 : 0,
         }
 
-        let insertCampus = await invoker(
-            global.config.serv_campus,
-            'postgrado/insertCampus',
-            params
-        );
-       
-        if (!insertCampus) {
-            res.json(reply.error(`El campus no pudo ser creado.`));
-            return;
-        }else{
-            try {
-                await insertDocs({
-                    arrayDocs: args.docsToUpload,
-                    coleccion: 'campus',
-                    extrasKeyCode: 'Cod_campus',
-                    extrasValueCode: codigoCampus,
-                    extrasKeyDescription: 'nombreCampus',
-                    extrasValueDescription: args.Descripcion_campus
-                })
-            } catch (error) {
-                let params = {
-                    codigoCampus: parseInt(codigoCampus),
-                }
-                await invoker(
-                    global.config.serv_campus,
-                    'postgrado/deleteCampus',
-                    params
-                );
-                res.json(reply.error(`Error al insertar documento.`));
-                return;
+        let insertCampus;
+
+        try {
+            insertCampus = await invoker(
+                global.config.serv_campus,
+                'postgrado/insertCampus',
+                params
+            );
+        } catch (error) {
+            throw error
+        }
+        let codigoCampus = insertCampus[0].Cod_Campus;
+
+        try {
+            await insertDocs({
+                arrayDocs: args.docsToUpload,
+                coleccion: 'campus',
+                extrasKeyCode: 'Cod_campus',
+                extrasValueCode: parseInt(codigoCampus),
+                extrasKeyDescription: 'nombreCampus',
+                extrasValueDescription: args.Descripcion_campus
+            })
+        } catch (error) {
+            //FALLA LA INSERCIÓN DE DOCUMENTOS POR LO QUE SE ELIMINA EL REGISTRO RECIEN CREADO
+            let params = {
+                codigoCampus: parseInt(codigoCampus),
             }
+            await invoker(
+                global.config.serv_campus,
+                'postgrado/deleteCampus',
+                params
+            );
+            throw `Falló la inserción de documentos. ${error.message}`;
         }
 
-        let response = { dataWasInserted: insertCampus, dataInserted: args.Descripcion_campus}
+        let response = { dataWasInserted: codigoCampus, dataInserted: args.Descripcion_campus}
         res.json(reply.ok(response));
 
     } catch (e) {
@@ -194,8 +194,7 @@ let logica_updateCampus = async (req , res) => {
 		msg += validador.validarParametro(args, "boolean", "isFromChangeState", true);
 
         if (msg != "") {
-            res.json(reply.error(msg));
-            return;
+            throw msg;
         }
         
         //condicion de actualizacion campus sin archivos
@@ -214,49 +213,11 @@ let logica_updateCampus = async (req , res) => {
        
         //si campus no tiene documentos y cambia de estado false a true desde la funcion changeState, mandar error
         if (documentos.length === 0 && args.Estado_campus === false && args.isFromChangeState === true) {
-            res.json(reply.error(`El campus ${args.Descripcion_campus} no es posible activar sin archivos adjuntos.`));
-            return
+            throw `El campus ${args.Descripcion_campus} no es posible activar sin archivos adjuntos.`
         }
 
-        let response = {};
-        let docs = [];
-
-        //docs por eliminar
-        if (args.docsToDelete.length != 0) {
-            for (let i = 0; i < args.docsToDelete.length; i++) {
-                const doc = args.docsToDelete[i];
-
-                let deleteDoc = await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/eliminarDocumento",
-                    {
-                        database: "gestionProgramas",
-                        coleccion: "campus",
-                        id: doc.id
-        
-                    }
-                );
-
-                if (!deleteDoc.deleted) {
-                    res.json(reply.error(`El documento no pudo ser eliminado.`));
-                    return;
-                }
-            }
-        }
-
-        await updateDocs({
-            arrayDocs: args.docsToUpload,
-            coleccion: 'campus',
-            extrasKeyCode: 'Cod_campus',
-            extrasValueCode: args.Cod_campus,
-            extrasKeyDescription: 'nombreCampus',
-            extrasValueDescription: args.Descripcion_campus
-        });
-
-        //ACTUALIZAR CAMPUS
-        
+        // INICIO ACTUALIZACION EN BD SQL
         let newState = args.Estado_campus === true ? false : true
-
         let params = {
             codigoCampus: parseInt(args.Cod_campus),
             descripcionCampus: args.Descripcion_campus,
@@ -266,14 +227,51 @@ let logica_updateCampus = async (req , res) => {
             //transformo a number variable estado campus (caso para update desde modal update)
             estadoCampus: args.isFromChangeState  ? (newState ? 1 : 0) : (args.Estado_campus ? 1 : 0), 
         }
+        let updateCampus;
+        try {
+            updateCampus = await invoker(
+                global.config.serv_campus,
+                'postgrado/updateCampus',
+                params
+            );
+        } catch (error) {
+            throw error
+        }
 
-        let updateCampus = await invoker(
-            global.config.serv_campus,
-            'postgrado/updateCampus',
-            params
-        );
+        // FIN ACTUALIZACION EN BD SQL
 
-        response = { dataWasUpdated: updateCampus, dataUpdated: args.Descripcion_campus }
+        //INICIO DOCS POR ELIMINAR
+        try {
+            await deleteDocs({
+                arrayDocs: args.docsToDelete,
+                coleccion: "campus"
+            })
+        } catch (error) {
+            throw `Falló la eliminación de documentos. ${error.message}`
+        }
+        //FIN DOCS POR ELIMINAR
+
+        //INICIO DOCS ACTUALIZAR
+        try {
+            await updateDocs({
+                arrayDocs: args.docsToUpload,
+                coleccion: 'campus',
+                extrasKeyCode: 'Cod_campus',
+                extrasValueCode: args.Cod_campus,
+                extrasKeyDescription: 'nombreCampus',
+                extrasValueDescription: args.Descripcion_campus
+            });
+        } catch (error) {
+            //FALLA EN LA ACTUALIZACIÓN DE DOCUMENTOS
+            
+            if (error.newDocsWasEliminated) {
+                throw `Falló la actualización de documentos. Los nuevos documentos adjuntados no fueron cargados. ${error.error.message}`;
+            }else{
+                throw `Falló la actualización de documentos. ${error.error.message}`
+            }
+        }
+        //FIN DOCS ACTUALIZAR 
+        let response = { dataWasUpdated: updateCampus, dataUpdated: args.Descripcion_campus }
         res.json(reply.ok(response));
 
     } catch (e) {
@@ -318,18 +316,14 @@ let logica_deleteCampus = async (req , res) => {
                 }
             );
 
-            for(let d of documentos){
-                await invoker(
-                    global.config.serv_mongoDocumentos,
-                    "documentos/eliminarDocumento",
-                    {
-                        database: 'gestionProgramas',
-                        coleccion: 'campus',
-                        id: d.id,
-                    }
-                );
+            try {
+                await deleteDocs({
+                    arrayDocs: documentos,
+                    coleccion: "campus"
+                })
+            } catch (error) {
+                throw `Falló la eliminación de documentos. ${error.message}`
             }
-
         }
         let response = { dataWasDeleted: true , dataDeleted: campusToDelete}
         res.json(reply.ok(response));
