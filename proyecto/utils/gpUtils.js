@@ -32,11 +32,12 @@ const insertDocs = async ({arrayDocs, coleccion, extrasKeyCode, extrasValueCode,
     if (!arrayDocs || arrayDocs.length == 0) {
         return;
     }
+    let arrayDocsInserted = [];
 
-    for (let i = 0; i < arrayDocs.length; i++) {
-        const doc = arrayDocs[i];
+    try {
+        for (let i = 0; i < arrayDocs.length; i++) {
+            const doc = arrayDocs[i];
 
-        try {
             const startTotal = performance.now(); // Inicia el contador total
 
             // Medir el tiempo solo para `documentoFind`
@@ -62,11 +63,13 @@ const insertDocs = async ({arrayDocs, coleccion, extrasKeyCode, extrasValueCode,
 
             if (documentoFind.length) {
                 // Retorna un error para manejarlo en el servicio que llama a esta función
-                throw new Error(`El documento ${doc.nombre} ya existe.`);
+                const errorObject = { message: `El documento ${doc.nombre} ya existe.` }
+                throw errorObject;
             }
 
             // Parámetros para guardar el documento
-            let params = {
+            let params;
+            params = {
                 database: "gestionProgramas",
                 coleccion: coleccion,
                 id: uuid.v1(),
@@ -91,27 +94,39 @@ const insertDocs = async ({arrayDocs, coleccion, extrasKeyCode, extrasValueCode,
             const endTotal = performance.now(); // Finaliza el contador total
             const timeTakenTotal = endTotal - startTotal; // Tiempo en milisegundos para la operación completa
             // console.log(`Tiempo total para insertar el documento ${doc.nombre}: ${timeTakenTotal.toFixed(2)} ms`);
-
-            return result;
-
-        } catch (error) {
-            throw error;
+            arrayDocsInserted.push(result)
         }
+        let response = {
+            status: true,
+            docsInserted: arrayDocsInserted
+        }
+        return response;
+    } catch (error) {
+        if (arrayDocsInserted.length !== 0) {
+            //SI HAY UN ERROR AL INSERTAR DOCUMENTOS, RECORRO LOS QUE ALCANZARON A INSERTARSE Y LOS ELIMINO
+            await deleteDocs({
+                arrayDocs: arrayDocsInserted,
+                coleccion: coleccion
+            })
+        }
+        throw error;
     }
+
 };
 
 const updateDocs = async ({arrayDocs , coleccion, extrasKeyCode, extrasValueCode, extrasKeyDescription , extrasValueDescription}) => {
     if (!arrayDocs || arrayDocs.length == 0) {
         return;
     }
-
-    for (let i = 0; i < arrayDocs.length; i++) {
-        const doc = arrayDocs[i];
-        try {
+    let arrayDocsUpdated = [];
+    let arrayDocsInsertedFromUpdate = []
+    try {
+        for (let i = 0; i < arrayDocs.length; i++) {
+            const doc = arrayDocs[i];
+            
             if (!doc.id) {
                 //es un nuevo archivo
-                //buscamos archivo con mismo codigo y nombre
-                await insertDocs({
+                let docInsertedFromUpdate = await insertDocs({
                     arrayDocs: [doc],
                     coleccion: coleccion,
                     extrasKeyCode: extrasKeyCode,
@@ -119,9 +134,9 @@ const updateDocs = async ({arrayDocs , coleccion, extrasKeyCode, extrasValueCode
                     extrasKeyDescription: extrasKeyDescription,
                     extrasValueDescription: extrasValueDescription
                 });
-    
+                let docUpdF = { id: docInsertedFromUpdate.docsInserted[0].id }
+                arrayDocsInsertedFromUpdate.push(docUpdF)
             }else{
-                //no es nuevo archivo, se actualiza
                 let params = {
                     database: "gestionProgramas",
                     coleccion: coleccion,
@@ -137,16 +152,62 @@ const updateDocs = async ({arrayDocs , coleccion, extrasKeyCode, extrasValueCode
                     }
                 };
     
-                await invoker(
+                let result = await invoker(
                     global.config.serv_mongoDocumentos,
                     "documentos/actualizarDocumento",
                     params
                 );
+                if (result.modified) {
+                    let docUpd = { id: doc.id }
+                    arrayDocsUpdated.push(docUpd)
+                }
             }
-        } catch (error) {
-            throw error;
         }
-        
+        let response = {
+            status: true,
+            docsUpdated: arrayDocsUpdated,
+            docsInserted: arrayDocsInsertedFromUpdate
+        }
+        return response
+    } catch (error) {
+        let newDocsWasEliminated = false
+        if (arrayDocsInsertedFromUpdate.length !== 0) {
+            newDocsWasEliminated = true
+            //SI HAY UN ERROR AL INSERTAR DOCUMENTOS NUEVOS, RECORRO LOS QUE ALCANZARON A INSERTARSE Y LOS ELIMINO
+            await deleteDocs({
+                arrayDocs: arrayDocsInsertedFromUpdate,
+                coleccion: coleccion
+            })
+        }
+        let response = {
+            newDocsWasEliminated: newDocsWasEliminated,
+            error: error
+        }
+        throw response;
+    }
+
+}
+
+const deleteDocs = async ({arrayDocs, coleccion}) => {
+    if (!arrayDocs || arrayDocs.length == 0) {
+        return;
+    }
+
+    try {
+        for (let i = 0; i < arrayDocs.length; i++) {
+            const doc = arrayDocs[i];
+            let deleteDoc = await invoker(
+                global.config.serv_mongoDocumentos,
+                "documentos/eliminarDocumento",
+                {
+                    database: "gestionProgramas",
+                    coleccion: coleccion,
+                    id: doc.id
+                }
+            );
+        }
+    } catch (error) {
+        throw error;
     }
 }
 
@@ -223,6 +284,7 @@ module.exports = {
     getNextCodigo, 
     insertDocs, 
     updateDocs, 
+    deleteDocs,
     formatDateGp,
     formatDateTimeGp,
     insertLogPrograma 

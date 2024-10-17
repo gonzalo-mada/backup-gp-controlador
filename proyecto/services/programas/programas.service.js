@@ -299,7 +299,7 @@ let insertPrograma = async (req, res) => {
         msg += validador.validarParametro(args, "cadena", "Director_selected", true);
         msg += validador.validarParametro(args, "cadena", "DirectorAlterno_selected", true);
         msg += validador.validarParametro(args, "cadena", "REXE", true);
-        msg += validador.validarParametro(args, "numero", "Cod_Programa", false);
+        // msg += validador.validarParametro(args, "numero", "Cod_Programa", false);
         msg += validador.validarParametro(args, "cadena", "Codigo_SIES", true);
         msg += validador.validarParametro(args, "numero", "Cod_Reglamento", true);
         msg += validador.validarParametro(args, "numero", "Cod_acreditacion", true);
@@ -358,7 +358,7 @@ let insertPrograma = async (req, res) => {
             res.json(reply.error(`El programa no pudo ser creado.`));
             return;
         }else{
-            codPrograma = insertPrograma[0].res;
+            codPrograma = insertPrograma[0].Cod_Programa;
             try {
                 if (args.Graduacion_Conjunta_Switch) {
                     // hay que insertar instituciones
