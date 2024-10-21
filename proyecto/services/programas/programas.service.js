@@ -290,14 +290,14 @@ let getInstitucionesSelected = async (req, res) => {
 let insertPrograma = async (req, res) => {
     try {
         let args = JSON.parse(req.body.arg === undefined ? "{}" : req.body.arg);
-        // console.log("args insert programa",args);
+        console.log("args insert programa",args);
         let msg = validador.validarParametro(args, "numero", "Centro_costo", true);
         msg += validador.validarParametro(args, "cadena", "Nombre_programa", true);
         msg += validador.validarParametro(args, "numero", "Tipo_programa", true);
         msg += validador.validarParametro(args, "cadena", "Titulo", true);
         msg += validador.validarParametro(args, "cadena", "Grado_academico", true);
         msg += validador.validarParametro(args, "cadena", "Director_selected", true);
-        msg += validador.validarParametro(args, "cadena", "DirectorAlterno_selected", true);
+        msg += validador.validarParametro(args, "cadena", "DirectorAlterno_selected", false);
         msg += validador.validarParametro(args, "cadena", "REXE", true);
         // msg += validador.validarParametro(args, "numero", "Cod_Programa", false);
         msg += validador.validarParametro(args, "cadena", "Codigo_SIES", true);
@@ -319,6 +319,10 @@ let insertPrograma = async (req, res) => {
             return;
         };
 
+        if(args.Director_selected === args.DirectorAlterno_selected){
+            throw `No es posible crear el programa con la misma persona asignada como Director(a) y Director(a) alterno(a).`;
+        }
+
         let params = {
             [campos_prog.Centro_costo] : args.Centro_costo,
             [campos_prog.Nombre_programa] : args.Nombre_programa,
@@ -326,7 +330,7 @@ let insertPrograma = async (req, res) => {
             [campos_prog.Titulo] : args.Titulo,
             [campos_prog.Grado_academico] : args.Grado_academico,
             [campos_prog.Director] : args.Director_selected,
-            [campos_prog.Director_alterno] : args.DirectorAlterno_selected,
+            [campos_prog.Director_alterno] : args.haveDirectorAlterno ? args.DirectorAlterno_selected : 0, 
             [campos_prog.REXE] : args.REXE,
             // [campos_prog.Cod_Programa] : args.Cod_Programa,
             [campos_prog.Codigo_SIES] : args.Codigo_SIES,
@@ -343,65 +347,82 @@ let insertPrograma = async (req, res) => {
         }
 
         let insertPrograma;
+        let wasInsertedPrograma = false;
+        let wasInsertedGradConjunta = false
+        let wasInsertedGradConjuntaPrograma = false;
         let codPrograma;
-        if (haveLogica) {
-            insertPrograma = await invoker (
-                global.config.serv_basePostgrado,
-                `${prog.s}/${prog.insert}`,
-                params
-            );
-        }else{
-            insertPrograma = listProgramas.push(params);
-        }
-
-        if (!insertPrograma) {
-            res.json(reply.error(`El programa no pudo ser creado.`));
-            return;
-        }else{
-            codPrograma = insertPrograma[0].Cod_Programa;
-            try {
-                if (args.Graduacion_Conjunta_Switch) {
-                    // hay que insertar instituciones
-                    
-                    for (let i = 0; i < args.Instituciones.length; i++) {
-                        const inst = args.Instituciones[i];
         
-                        if (haveLogica) {
+
+        try {
+
+            if (haveLogica) {
+                try {
+                    insertPrograma = await invoker (
+                        global.config.serv_basePostgrado,
+                        `${prog.s}/${prog.insert}`,
+                        params
+                    );
+                } catch (error) {
+                    throw error
+                }
+            }else{
+                insertPrograma = listProgramas.push(params);
+            }
+    
+            codPrograma = insertPrograma[0].Cod_Programa;
+            wasInsertedPrograma = true;
+
+            if (args.Graduacion_Conjunta_Switch) {
+                // hay que insertar instituciones
+                
+                for (let i = 0; i < args.Instituciones.length; i++) {
+                    const inst = args.Instituciones[i];
+    
+                    if (haveLogica) {
+                        try {
                             listGradConjunta = await invoker(
                                 global.config.serv_basePostgrado,
                                 `${gradConjunta.s}/${gradConjunta.get}`,
                                 null
-                            );
+                            )
+                        } catch (error) {
+                            throw `No fue posible obtener instituciones. ${error}`
                         }
+                    }
 
-                        const institucionEncontrada  = listGradConjunta.find(item => item.Cod_institucion === inst.idInstitucion);
-                        let codigo_gradConj;
+                    const institucionEncontrada  = listGradConjunta.find(item => item.Cod_institucion === inst.idInstitucion);
+                    let codigo_gradConj;
 
-                        if (institucionEncontrada ) {
-                            // no se inserta en tabla
-                            codigo_gradConj = institucionEncontrada.Cod_GraduacionConjunta;
-                        } else {
-                            // si se inserta
-                            codigo_gradConj = getNextCodigo(listGradConjunta,campos_gradConjunta.Cod_GraduacionConjunta);
-                            let params_gradConjunta = {
-                                [campos_gradConjunta.Cod_GraduacionConjunta]: parseInt(codigo_gradConj),
-                                [campos_gradConjunta.Cod_institucion]: inst.idInstitucion,
-                                [campos_gradConjunta.Descripcion_institucion]: inst.nombreInstitucion,
-                            }
-                            if (haveLogica) {
+                    if (institucionEncontrada ) {
+                        // no se inserta en tabla
+                        codigo_gradConj = institucionEncontrada.Cod_GraduacionConjunta;
+                    } else {
+                        // si se inserta
+                        codigo_gradConj = getNextCodigo(listGradConjunta,campos_gradConjunta.Cod_GraduacionConjunta);
+                        let params_gradConjunta = {
+                            [campos_gradConjunta.Cod_GraduacionConjunta]: parseInt(codigo_gradConj),
+                            [campos_gradConjunta.Cod_institucion]: inst.idInstitucion,
+                            [campos_gradConjunta.Descripcion_institucion]: inst.nombreInstitucion,
+                        }
+                        if (haveLogica) {
+                            try {
                                 await invoker (
                                     global.config.serv_basePostgrado,
                                     `${gradConjunta.s}/${gradConjunta.insert}`,
                                     params_gradConjunta
                                 );
-                            }else{
-                                listGradConjunta.push(params_gradConjunta);
+                            } catch (error) {
+                                throw `No fue posible insertar institución. ${error}`
                             }
-
-
+                        }else{
+                            listGradConjunta.push(params_gradConjunta);
                         }
+                        wasInsertedGradConjunta = true;
 
-                        //inicio insert tabla graduacionconjunta_programa
+                    }
+
+                    //inicio insert tabla graduacionconjunta_programa
+                    try {
                         if (haveLogica) {
                             listGradConjunta_prog = await invoker(
                                 global.config.serv_basePostgrado,
@@ -409,16 +430,21 @@ let insertPrograma = async (req, res) => {
                                 null
                             );
                         }
-        
-                        let codigo_gradConj_prog = getNextCodigo(listGradConjunta_prog,campos_gradConjunta_prog.Cod_GraduacionConjunta_Programa);
-        
-                        let params_gradConjunta_prog = {
-                            [campos_gradConjunta_prog.Cod_GraduacionConjunta_Programa] : parseInt(codigo_gradConj_prog),
-                            [campos_gradConjunta_prog.Cod_Programa] : codPrograma,
-                            [campos_gradConjunta_prog.Cod_GraduacionConjunta] : parseInt(codigo_gradConj)
-        
-                        }
-        
+                    } catch (error) {
+                        throw `No fue posible obtener instituciones y programas. ${error}`
+                    }
+
+    
+                    let codigo_gradConj_prog = getNextCodigo(listGradConjunta_prog,campos_gradConjunta_prog.Cod_GraduacionConjunta_Programa);
+    
+                    let params_gradConjunta_prog = {
+                        [campos_gradConjunta_prog.Cod_GraduacionConjunta_Programa] : parseInt(codigo_gradConj_prog),
+                        [campos_gradConjunta_prog.Cod_Programa] : codPrograma,
+                        [campos_gradConjunta_prog.Cod_GraduacionConjunta] : parseInt(codigo_gradConj)
+    
+                    }
+    
+                    try {
                         if (haveLogica) {
                             await invoker (
                                 global.config.serv_basePostgrado,
@@ -428,109 +454,61 @@ let insertPrograma = async (req, res) => {
                         }else{
                             listGradConjunta_prog.push(params_gradConjunta_prog);
                         }
-                        //fin insert tabla graduacionconjunta_programa
+                    } catch (error) {
+                        throw `No fue posible insertar institución y programa. ${error}`
                     }
+                    //fin insert tabla graduacionconjunta_programa
                 }
-                for (let j = 0; j < args.docsToUpload.length; j++) {
-                    const doc = args.docsToUpload[j];
-                    let arrayDocs = [];
-                    arrayDocs.push(doc)
-                    switch (doc.from) {
-                        case 'Maestro': 
-                            await insertDocs({
-                                arrayDocs: arrayDocs,
-                                coleccion: 'maestro',
-                                extrasKeyCode: 'CodPrograma',
-                                extrasValueCode: codPrograma,
-                                extrasKeyDescription: 'nombrePrograma',
-                                extrasValueDescription: args.Nombre_programa
-                            })
-                        break;
-                        case 'Título':
-                            await insertDocs({
-                                arrayDocs: arrayDocs,
-                                coleccion: 'titulo',
-                                extrasKeyCode: 'CodPrograma',
-                                extrasValueCode: codPrograma,
-                                extrasKeyDescription: 'nombreTitulo',
-                                extrasValueDescription: args.Titulo
-                            })
-                        break;
-
-                        case 'Grado académico':
-                            await insertDocs({
-                                arrayDocs: arrayDocs,
-                                coleccion: 'grado_academico',
-                                extrasKeyCode: 'CodPrograma',
-                                extrasValueCode: codPrograma,
-                                extrasKeyDescription: 'nombreGradoAcademico',
-                                extrasValueDescription: args.Grado_academico
-                            })
-                        break;
-
-                        case 'REXE':
-                            await insertDocs({
-                                arrayDocs: arrayDocs,
-                                coleccion: 'REXE',
-                                extrasKeyCode: 'CodPrograma',
-                                extrasValueCode: codPrograma,
-                                extrasKeyDescription: 'codigoREXE',
-                                extrasValueDescription: args.REXE
-                            })
-                        break;
-
-                        case 'Director':
-                            await insertDocs({
-                                arrayDocs: arrayDocs,
-                                coleccion: 'director',
-                                extrasKeyCode: 'CodPrograma',
-                                extrasValueCode: codPrograma,
-                                extrasKeyDescription: 'rutDirector',
-                                extrasValueDescription: args.Director_selected
-                            })
-                        break;
-
-                        case 'Director alterno':
-                            await insertDocs({
-                                arrayDocs: arrayDocs,
-                                coleccion: 'directorAlterno',
-                                extrasKeyCode: 'CodPrograma',
-                                extrasValueCode: codPrograma,
-                                extrasKeyDescription: 'rutDirectorAlterno',
-                                extrasValueDescription: args.DirectorAlterno_selected
-                            })
-                        break;
-
-                        case 'Estado maestro':
-                            await insertDocs({
-                                arrayDocs: arrayDocs,
-                                coleccion: 'estado_maestro',
-                                extrasKeyCode: 'CodPrograma',
-                                extrasValueCode: codPrograma,
-                                extrasKeyDescription: 'descripEstadoMaestro',
-                                extrasValueDescription: args.EstadoMaestro.Descripcion_EstadoMaestro 
-                            })
-                        break;
-                    }
-                }
-            } catch (error) {
-                if (haveLogica) {
-                    console.log("entre a este error");
-                    //TODO: SPRINT 5. DELETE PROGRAMA
-                    // await invoker(
-                    //     global.config.serv_basePostgrado,
-                    //     `${prog.s}/${prog.delete}`,
-                    //     { [campos_prog.Cod_Programa] : args.Cod_Programa }
-                    // );
-                }else{
-                    listProgramas = listProgramas.filter( prog => prog[campos_prog.Cod_Programa] != codPrograma)
-                }
-                throw error;
             }
+
+            try {
+                await insertDocs({
+                    arrayDocs: args.docsToUpload,
+                    coleccion: 'maestro',
+                    extrasKeyCode: 'CodPrograma',
+                    extrasValueCode: codPrograma,
+                    extrasKeyDescription: 'nombrePrograma',
+                    extrasValueDescription: args.Nombre_programa
+                })
+            } catch (error) {
+                throw `Falló la inserción de documentos. ${error.message}`;
+            }
+
+            try {
+                await insertLogPrograma(req, codPrograma,'CREACIÓN DE PROGRAMA','C')
+            } catch (error) {
+                throw `Falló la inserción del log. ${error}`;
+            }
+
+            let response = { dataWasInserted: insertPrograma , dataInserted: args.Nombre_programa}
+            res.json(reply.ok(response));
+
+        } catch (error) {
+            if (haveLogica) {
+                console.log("entre a este error en el catch principal de programa");
+                if (wasInsertedGradConjuntaPrograma) {
+                    //se creó institucion en GraduacionConjunta_Programa por lo que hay que eliminarla
+                }
+                if (wasInsertedGradConjunta) {
+                    //se creó institucion en P_GraduacionConjunta por lo que hay que eliminarla
+                }
+                if (wasInsertedPrograma) {
+                    //se creó programa por lo que hay que eliminarlo.
+                }
+                //TODO: SPRINT 5. DELETE PROGRAMA
+                // await invoker(
+                //     global.config.serv_basePostgrado,
+                //     `${prog.s}/${prog.delete}`,
+                //     { [campos_prog.Cod_Programa] : args.Cod_Programa }
+                // );
+            }else{
+                listProgramas = listProgramas.filter( prog => prog[campos_prog.Cod_Programa] != codPrograma)
+            }
+            throw error;
         }
-        let insertLog = await insertLogPrograma(req, codPrograma,'CREACIÓN DE PROGRAMA','C')
-        let response = { dataWasInserted: insertPrograma , dataInserted: args.Nombre_programa}
-        res.json(reply.ok(response));
+
+        
+
     } catch (e) {
         res.json(reply.fatal(e));
     }
@@ -651,6 +629,71 @@ let getArchiveDoc = async (req, res) => {
     }
 }
 
+// case 'Título':
+//     await insertDocs({
+//         arrayDocs: arrayDocs,
+//         coleccion: 'titulo',
+//         extrasKeyCode: 'CodPrograma',
+//         extrasValueCode: codPrograma,
+//         extrasKeyDescription: 'nombreTitulo',
+//         extrasValueDescription: args.Titulo
+//     })
+// break;
+
+// case 'Grado académico':
+//     await insertDocs({
+//         arrayDocs: arrayDocs,
+//         coleccion: 'grado_academico',
+//         extrasKeyCode: 'CodPrograma',
+//         extrasValueCode: codPrograma,
+//         extrasKeyDescription: 'nombreGradoAcademico',
+//         extrasValueDescription: args.Grado_academico
+//     })
+// break;
+
+// case 'REXE':
+//     await insertDocs({
+//         arrayDocs: arrayDocs,
+//         coleccion: 'REXE',
+//         extrasKeyCode: 'CodPrograma',
+//         extrasValueCode: codPrograma,
+//         extrasKeyDescription: 'codigoREXE',
+//         extrasValueDescription: args.REXE
+//     })
+// break;
+
+// case 'Director':
+//     await insertDocs({
+//         arrayDocs: arrayDocs,
+//         coleccion: 'director',
+//         extrasKeyCode: 'CodPrograma',
+//         extrasValueCode: codPrograma,
+//         extrasKeyDescription: 'rutDirector',
+//         extrasValueDescription: args.Director_selected
+//     })
+// break;
+
+// case 'Director alterno':
+//     await insertDocs({
+//         arrayDocs: arrayDocs,
+//         coleccion: 'directorAlterno',
+//         extrasKeyCode: 'CodPrograma',
+//         extrasValueCode: codPrograma,
+//         extrasKeyDescription: 'rutDirectorAlterno',
+//         extrasValueDescription: args.DirectorAlterno_selected
+//     })
+// break;
+
+// case 'Estado maestro':
+//     await insertDocs({
+//         arrayDocs: arrayDocs,
+//         coleccion: 'estado_maestro',
+//         extrasKeyCode: 'CodPrograma',
+//         extrasValueCode: codPrograma,
+//         extrasKeyDescription: 'descripEstadoMaestro',
+//         extrasValueDescription: args.EstadoMaestro.Descripcion_EstadoMaestro 
+//     })
+// break;
 module.exports = {
     getDirector,
     getPrograma,
